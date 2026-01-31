@@ -11,7 +11,7 @@ import Carbon
 class EventTapManager {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private let symbolInserter = SymbolInserter()
+    private var symbolInserter: SymbolInserter!
     
     // Состояние клавиш-модификаторов
     private var rightOptionPressed = false
@@ -30,6 +30,9 @@ class EventTapManager {
     private var debugLoggingEnabled = false  // Включи для отладки
     
     init() {
+        // Создаём symbolInserter с ссылкой на self для сброса флагов
+        self.symbolInserter = SymbolInserter(eventTapManager: self)
+        
         // Подписываемся на изменения маппингов
         NotificationCenter.default.addObserver(
             self,
@@ -237,7 +240,13 @@ class EventTapManager {
             // Right Option = keyCode 0x3D (61), Left Option = 0x3A (58)
             if keyCode == 0x3D {
                 // Правый Option нажат/отпущен
+                let wasPressed = rightOptionPressed
                 rightOptionPressed = flags.contains(.maskAlternate)
+                
+                // 🔧 ВАЖНО: Логируем изменения для отладки
+                if wasPressed != rightOptionPressed {
+                    print("🔵 Right Option (flagsChanged): \(wasPressed ? "нажат" : "отпущен") → \(rightOptionPressed ? "нажат" : "отпущен")")
+                }
             } else if keyCode == 0x3A {
                 // Левый Option нажат/отпущен — НЕ трогаем rightOptionPressed!
                 // Он остаётся false
@@ -252,8 +261,13 @@ class EventTapManager {
         // Обработка KeyUp - блокируем для наших маппингов
         if type == .keyUp {
             let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
+            
+            // 🔧 ФИКС: Проверяем Right Option из ТЕКУЩЕГО события, а не из старого флага!
+            let eventFlags = event.flags
+            let currentRightOption = eventFlags.contains(.maskAlternate)
+            
             // Блокируем KeyUp для наших маппингов если Right Option нажат
-            if rightOptionPressed && mappings[keyCode] != nil {
+            if currentRightOption && mappings[keyCode] != nil {
                 return nil
             }
             return Unmanaged.passRetained(event)
@@ -271,23 +285,26 @@ class EventTapManager {
             return Unmanaged.passRetained(event)
         }
         
-        // ВАЖНО: Проверяем Right Option ПРЯМО из события, а не из флага!
-        // Это решает проблему с залипанием при быстрой печати
+        // 🔧 ФИКС ЗАЛИПАНИЯ: Читаем состояние модификаторов ПРЯМО из текущего события!
+        // Не доверяем старым флагам — они могут отставать при быстрой печати
         let eventFlags = event.flags
+        let currentRightOption = eventFlags.contains(.maskAlternate)
+        let currentShift = eventFlags.contains(.maskShift)
         
-        // Проверяем КОНКРЕТНО правый Option через наш флаг
-        // (eventFlags.contains(.maskAlternate) срабатывает на ОБА Option!)
-        let currentShiftPressed = eventFlags.contains(.maskShift)
+        // Обновляем наши флаги (для логирования и отладки)
+        if currentRightOption != rightOptionPressed {
+            print("🔧 Right Option СИНХРОНИЗАЦИЯ (keyDown): \(rightOptionPressed) → \(currentRightOption)")
+            rightOptionPressed = currentRightOption
+        }
         
-        // Обновляем флаг shift
-        shiftPressed = currentShiftPressed
+        shiftPressed = currentShift
         
-        // Проверяем правый Option
-        guard rightOptionPressed else {
+        // Проверяем Right Option ИЗ СОБЫТИЯ (а не из старого флага!)
+        guard currentRightOption else {
             // ✨ Если в режиме диакритики — применяем к обычной букве
             if isDiacriticMode {
                 // Получаем введённый символ через keyCode
-                if let char = getCharacterFromKeyCode(keyCode, shift: shiftPressed) {
+                if let char = getCharacterFromKeyCode(keyCode, shift: currentShift) {
                     applyDiacritic(to: char)
                     return nil  // Блокируем оригинальное событие
                 } else {
@@ -304,10 +321,11 @@ class EventTapManager {
             // ЗАЩИТА ОТ АВТОПОВТОРА используя встроенный флаг CGEvent
             let autoRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
             if autoRepeat {
+                print("🚫 Автоповтор заблокирован: keyCode=\(keyCode)")
                 return nil  // Блокируем автоповтор
             }
             
-            let symbol = shiftPressed ? mapping.shift : mapping.normal
+            let symbol = currentShift ? mapping.shift : mapping.normal
             
             // ✨ Проверяем: это диакритика?
             if isCombiningDiacritic(symbol) {
@@ -322,6 +340,7 @@ class EventTapManager {
             }
             
             // Обычная вставка символа
+            print("⌨️ R⌥ + keyCode(\(keyCode)) → \(symbol)")
             symbolInserter.insertSymbol(symbol)
             
             // Блокируем оригинальное событие
@@ -399,10 +418,17 @@ class SymbolInserter {
     // Флаг для предотвращения зацикливания
     private(set) var isInserting = false
     
+    // Слабая ссылка на EventTapManager для сброса флагов
+    private weak var eventTapManager: EventTapManager?
+    
     // ✅ ОПТИМИЗАЦИЯ: Кеш для проверки нужен ли clipboard метод
     // Большинство символов повторяются, поэтому кешируем результаты
     private var clipboardCache: [String: Bool] = [:]
     private let maxCacheSize = 100
+    
+    init(eventTapManager: EventTapManager) {
+        self.eventTapManager = eventTapManager
+    }
     
     func insertSymbol(_ symbol: String) {
         // Пустые символы пропускаем
@@ -413,16 +439,11 @@ class SymbolInserter {
         // Устанавливаем флаг
         isInserting = true
         
-        // Всегда используем прямой метод
-        // Он автоматически выбирает clipboard для эмодзи и специальных символов
+        // Всегда используем прямой метод (он сам решит нужен ли clipboard)
         insertDirect(symbol)
         
-        // Снимаем флаг с задержкой
-        // ✅ ОПТИМИЗАЦИЯ: Проверяем через быструю функцию O(1) вместо O(n)
-        let needsClipboard = self.needsClipboard(symbol)
-        let delay: Double = needsClipboard ? 0.15 : 0.03
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+        // Снимаем флаг с небольшой задержкой (одинаковой для всех символов)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             self?.isInserting = false
         }
     }
@@ -452,7 +473,7 @@ class SymbolInserter {
     }
     
     // ВСПОМОГАТЕЛЬНЫЙ МЕТОД: Вставка через буфер обмена
-    // Используется только для эмодзи и специальных символов
+    // Используется ТОЛЬКО для пробелов (direct метод с ними не дружит)
     // Восстанавливает буфер с УМНОЙ задержкой чтобы не мешать повторным вставкам
     private func insertViaClipboard(_ symbol: String) {
         let pasteboard = NSPasteboard.general
@@ -467,6 +488,8 @@ class SymbolInserter {
         
         // Симулируем Cmd+V
         simulateCommandV()
+        
+        print("📋 Вставлено через CLIPBOARD метод: \(symbol)")
         
         // Восстанавливаем буфер с задержкой
         // ВАЖНО: Даём время на Cmd+V И проверяем что буфер не изменился
@@ -489,24 +512,16 @@ class SymbolInserter {
     }
     
     // ОСНОВНОЙ МЕТОД ВСТАВКИ
-    // Автоматически выбирает оптимальный способ:
-    // - Прямой ввод (Unicode events) для обычных символов — быстро, не трогает буфер
-    // - Clipboard для эмодзи и специальных символов > U+FFFF — работает всегда
+    // 🧪 ЭКСПЕРИМЕНТ: Попробуем ВСЕГДА использовать прямой метод (даже для эмодзи)
+    // Это должно решить проблему с залипанием Right Option!
     private func insertDirect(_ symbol: String) {
-        // ✅ ОПТИМИЗАЦИЯ: Используем быструю проверку вместо O(n) итерации
-        // Эмодзи и специальные символы (> U+FFFF) - через clipboard
-        if needsClipboard(symbol) {
-            insertViaClipboard(symbol)
-            return
-        }
-        
         // Пробелы - через clipboard (прямой метод с ними не дружит)
         if symbol.trimmingCharacters(in: .whitespaces).isEmpty && symbol.count > 0 {
             insertViaClipboard(symbol)
             return
         }
         
-        // ВСЁ ОСТАЛЬНОЕ - прямой ввод через Unicode events
+        // 🧪 ВСЁ ОСТАЛЬНОЕ (включая эмодзи!) - прямой ввод через Unicode events
         let source = CGEventSource(stateID: .hidSystemState)
         
         // Создаём KeyDown событие
@@ -528,6 +543,8 @@ class SymbolInserter {
         
         keyUpEvent.keyboardSetUnicodeString(stringLength: unicodeChars.count, unicodeString: unicodeChars)
         keyUpEvent.post(tap: .cghidEventTap)
+        
+        print("🎯 Вставлено через DIRECT метод: \(symbol)")
     }
     
     private func simulateCommandV() {
@@ -545,12 +562,16 @@ class SymbolInserter {
         
         usleep(10000) // 10ms задержка
         
-        // V Up
+        // V Up - 🔧 ФИКС: Добавляем флаг Command при отпускании
         let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+        vUp?.flags = .maskCommand  // ← Важно! Сохраняем контекст модификатора
         vUp?.post(tap: .cghidEventTap)
         
-        // Cmd Up
+        usleep(1000) // 1ms между V Up и Cmd Up
+        
+        // Cmd Up - 🔧 ФИКС: Явно отпускаем Command
         let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: false)
+        cmdUp?.flags = []  // ← Важно! Пустые флаги = все модификаторы отпущены
         cmdUp?.post(tap: .cghidEventTap)
     }
 }
