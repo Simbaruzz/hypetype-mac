@@ -262,12 +262,9 @@ class EventTapManager {
         if type == .keyUp {
             let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
             
-            // 🔧 ФИКС: Проверяем Right Option из ТЕКУЩЕГО события, а не из старого флага!
-            let eventFlags = event.flags
-            let currentRightOption = eventFlags.contains(.maskAlternate)
-            
             // Блокируем KeyUp для наших маппингов если Right Option нажат
-            if currentRightOption && mappings[keyCode] != nil {
+            // (используем флаг из flagsChanged)
+            if rightOptionPressed && mappings[keyCode] != nil {
                 return nil
             }
             return Unmanaged.passRetained(event)
@@ -285,22 +282,23 @@ class EventTapManager {
             return Unmanaged.passRetained(event)
         }
         
-        // 🔧 ФИКС ЗАЛИПАНИЯ: Читаем состояние модификаторов ПРЯМО из текущего события!
-        // Не доверяем старым флагам — они могут отставать при быстрой печати
+        // 🔧 ЗАЩИТА ОТ ЗАЛИПАНИЯ: Проверяем что наш флаг rightOptionPressed актуален
+        // ВАЖНО: В keyDown мы НЕ МОЖЕМ различить Left/Right Option через CGEventFlags!
+        // Поэтому доверяем flagsChanged для установки флага, но проверяем актуальность
         let eventFlags = event.flags
-        let currentRightOption = eventFlags.contains(.maskAlternate)
+        let eventHasAnyOption = eventFlags.contains(.maskAlternate)
         let currentShift = eventFlags.contains(.maskShift)
         
-        // Обновляем наши флаги (для логирования и отладки)
-        if currentRightOption != rightOptionPressed {
-            print("🔧 Right Option СИНХРОНИЗАЦИЯ (keyDown): \(rightOptionPressed) → \(currentRightOption)")
-            rightOptionPressed = currentRightOption
+        // Если событие говорит что НЕТ Option вообще, а наш флаг true — сбрасываем
+        if !eventHasAnyOption && rightOptionPressed {
+            print("🔧 Right Option АВТО-СБРОС: событие без Option, но флаг true")
+            rightOptionPressed = false
         }
         
         shiftPressed = currentShift
         
-        // Проверяем Right Option ИЗ СОБЫТИЯ (а не из старого флага!)
-        guard currentRightOption else {
+        // Проверяем наш флаг (установленный через flagsChanged с различением Left/Right)
+        guard rightOptionPressed else {
             // ✨ Если в режиме диакритики — применяем к обычной букве
             if isDiacriticMode {
                 // Получаем введённый символ через keyCode
