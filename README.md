@@ -33,7 +33,7 @@
 
 ### Установка
 
-Теоретически совместимо до macOS Ventura 13 и выше. Но я тестировал только macOS Sequoia 15. 
+Теоретически совместимо с macOS Ventura 13 и выше. Но я тестировал только macOS Sequoia 15. 
 
 1. Скачиваем [hypetype.zip](https://github.com/Simbaruzz/hypetype-mac/releases/latest/download/hypetype.zip) ≈250 Kb
 2. Лучше всего положить архив по умолчанию в «Загрузки» Downloads
