@@ -6,7 +6,11 @@
 - с возможностью настройки символов через интерфейс
 - без конфликтов со стандартными сочетаниями клавиш в других программах
 
-[Скачать macOS ↓](https://github.com/Simbaruzz/hypetype-mac/releases/latest/download/hypetype.zip) · [Скачать Windows](https://github.com/Simbaruzz/hypetype) · [Глянуть обзор↗](https://youtu.be/UjZb-TLLQCc)
+[![Скачать для macOS](https://img.shields.io/github/downloads/Simbaruzz/hypetype-mac/total?style=for-the-badge&label=Скачать%20для%20macOS&logo=apple&logoColor=white&labelColor=FFFFFF&color=9800FF)](https://github.com/Simbaruzz/hypetype-mac/releases/latest/download/hypetype.zip)
+
+<!--*[Скачать macOS ↓](https://github.com/Simbaruzz/hypetype-mac/releases/latest/download/hypetype.zip) ![Downloads](https://img.shields.io/github/downloads/Simbaruzz/hypetype-mac/total?style=for-the-badge&labelColor=FFFFFF&color=9800FF&link)*//-->
+
+[Версия для Windows](https://github.com/Simbaruzz/hypetype) · [Глянуть обзор↗](https://kinescope.io/abuBBFVnutiarvYxrB8d7K)
 
 
 <br>
