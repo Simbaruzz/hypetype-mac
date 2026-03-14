@@ -484,6 +484,11 @@ class SymbolInserter {
         pasteboard.clearContents()
         pasteboard.setString(symbol, forType: .string)
         
+        // ✅ ФИКС: HTML-формат для ProseMirror-редакторов (Habr и т.п.)
+        // Без этого whitespace-символы нормализуются и пропадают
+        let html = "<span>\(symbol)</span>"
+        pasteboard.setString(html, forType: .html)
+        
         // Симулируем Cmd+V
         simulateCommandV()
         
