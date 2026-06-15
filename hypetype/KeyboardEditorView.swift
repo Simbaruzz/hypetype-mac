@@ -190,87 +190,29 @@ struct KeyEditSheet: View {
 class KeyboardEditorViewModel: ObservableObject {
     @Published var editingKey: KeyInfo?
     @Published var mappings: [Int: (normal: String, shift: String)] = [:]
-    
-    // Ряды клавиатуры
+
     let numberRow: [KeyInfo]
     let qwertyRow: [KeyInfo]
     let asdfRow: [KeyInfo]
     let zxcvRow: [KeyInfo]
-    let spaceRow: [KeyInfo]
-    
+
     init() {
-        // Загружаем текущие маппинги
         mappings = MappingManager.shared.loadMappings()
-        
-        // Создаём клавиши
-        numberRow = [
-            KeyInfo(keyCode: 0x12, label: "1"),
-            KeyInfo(keyCode: 0x13, label: "2"),
-            KeyInfo(keyCode: 0x14, label: "3"),
-            KeyInfo(keyCode: 0x15, label: "4"),
-            KeyInfo(keyCode: 0x17, label: "5"),
-            KeyInfo(keyCode: 0x16, label: "6"),
-            KeyInfo(keyCode: 0x1A, label: "7"),
-            KeyInfo(keyCode: 0x1C, label: "8"),
-            KeyInfo(keyCode: 0x19, label: "9"),
-            KeyInfo(keyCode: 0x1D, label: "0"),
-            KeyInfo(keyCode: 0x1B, label: "-"),
-            KeyInfo(keyCode: 0x18, label: "="),
-        ]
-        
-        qwertyRow = [
-            KeyInfo(keyCode: 0x0C, label: "Q"),
-            KeyInfo(keyCode: 0x0D, label: "W"),
-            KeyInfo(keyCode: 0x0E, label: "E"),
-            KeyInfo(keyCode: 0x0F, label: "R"),
-            KeyInfo(keyCode: 0x11, label: "T"),
-            KeyInfo(keyCode: 0x10, label: "Y"),
-            KeyInfo(keyCode: 0x20, label: "U"),
-            KeyInfo(keyCode: 0x22, label: "I"),
-            KeyInfo(keyCode: 0x1F, label: "O"),
-            KeyInfo(keyCode: 0x23, label: "P"),
-            KeyInfo(keyCode: 0x21, label: "["),
-            KeyInfo(keyCode: 0x1E, label: "]"),
-        ]
-        
-        asdfRow = [
-            KeyInfo(keyCode: 0x00, label: "A"),
-            KeyInfo(keyCode: 0x01, label: "S"),
-            KeyInfo(keyCode: 0x02, label: "D"),
-            KeyInfo(keyCode: 0x03, label: "F"),
-            KeyInfo(keyCode: 0x05, label: "G"),
-            KeyInfo(keyCode: 0x04, label: "H"),
-            KeyInfo(keyCode: 0x26, label: "J"),
-            KeyInfo(keyCode: 0x28, label: "K"),
-            KeyInfo(keyCode: 0x25, label: "L"),
-            KeyInfo(keyCode: 0x29, label: ";"),
-            KeyInfo(keyCode: 0x27, label: "'"),
-            KeyInfo(keyCode: 0x2A, label: "\\"),  // Бэкслэш
-        ]
-        
-        zxcvRow = [
-            KeyInfo(keyCode: 0x06, label: "Z"),
-            KeyInfo(keyCode: 0x07, label: "X"),
-            KeyInfo(keyCode: 0x08, label: "C"),
-            KeyInfo(keyCode: 0x09, label: "V"),
-            KeyInfo(keyCode: 0x0B, label: "B"),
-            KeyInfo(keyCode: 0x2D, label: "N"),
-            KeyInfo(keyCode: 0x2E, label: "M"),  // Добавил M
-            KeyInfo(keyCode: 0x2B, label: ","),
-            KeyInfo(keyCode: 0x2F, label: "."),
-            KeyInfo(keyCode: 0x2C, label: "/"),
-            KeyInfo(keyCode: 0x31, label: "␣"),  // Пробел
-            KeyInfo(keyCode: 0x32, label: "`"),  // Тильда/ё
-        ]
-        
-        spaceRow = []  // Убираем отдельный ряд для пробела
-        
-        // Обновляем символы из маппингов
+
+        func makeRow(_ slice: ArraySlice<KeyDef>) -> [KeyInfo] {
+            slice.map { KeyInfo(keyCode: $0.macKeyCode, label: $0.displayLabel) }
+        }
+
+        numberRow = makeRow(KeyDefinitions.numberRow)
+        qwertyRow = makeRow(KeyDefinitions.qwertyRow)
+        asdfRow   = makeRow(KeyDefinitions.asdfRow)
+        zxcvRow   = makeRow(KeyDefinitions.zxcvRow)
+
         updateSymbols()
     }
     
     private func updateSymbols() {
-        for keyInfo in numberRow + qwertyRow + asdfRow + zxcvRow + spaceRow {
+        for keyInfo in numberRow + qwertyRow + asdfRow + zxcvRow {
             if let mapping = mappings[keyInfo.keyCode] {
                 keyInfo.normalSymbol = mapping.normal
                 keyInfo.shiftSymbol = mapping.shift

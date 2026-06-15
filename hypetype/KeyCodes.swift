@@ -65,43 +65,8 @@ import Foundation
 // MARK: - Helper Extension
 
 extension Int {
-    /// Получить читаемое название клавиши
     var keyName: String {
-        return KeyCodeMapper.keyName(for: self)
-    }
-}
-
-struct KeyCodeMapper {
-    static func keyName(for keyCode: Int) -> String {
-        let names: [Int: String] = [
-            // Буквы
-            0x00: "A", 0x0B: "B", 0x08: "C", 0x02: "D", 0x0E: "E",
-            0x03: "F", 0x05: "G", 0x04: "H", 0x22: "I", 0x26: "J",
-            0x28: "K", 0x25: "L", 0x2E: "M", 0x2D: "N", 0x1F: "O",
-            0x23: "P", 0x0C: "Q", 0x0F: "R", 0x01: "S", 0x11: "T",
-            0x20: "U", 0x09: "V", 0x0D: "W", 0x07: "X", 0x10: "Y",
-            0x06: "Z",
-            
-            // Цифры
-            0x12: "1", 0x13: "2", 0x14: "3", 0x15: "4", 0x17: "5",
-            0x16: "6", 0x1A: "7", 0x1C: "8", 0x19: "9", 0x1D: "0",
-            
-            // Символы
-            0x18: "=", 0x1B: "-", 0x21: "[", 0x1E: "]", 0x27: "'",
-            0x29: ";", 0x2A: "\\", 0x2B: ",", 0x2C: "/", 0x2F: ".",
-            0x32: "`",
-            
-            // Специальные
-            0x24: "Return", 0x30: "Tab", 0x31: "Space",
-            0x33: "Delete", 0x35: "Escape",
-            
-            // Модификаторы (для справки)
-            0x37: "Cmd(L)", 0x38: "Shift(L)", 0x3A: "Opt(L)",
-            0x3D: "Opt(R)", 0x3B: "Ctrl(L)", 0x3C: "Shift(R)",
-            0x3E: "Ctrl(R)", 0x36: "Cmd(R)",
-        ]
-        
-        return names[keyCode] ?? "Key(\(keyCode))"
+        KeyDefinitions.byMacKeyCode[self]?.displayLabel ?? "Key(\(self))"
     }
 }
 
