@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Xcode — пользовательское состояние (не общее для проекта)
+xcuserdata/
+*.xcuserstate
+
+# Сборка
+build/
+DerivedData/
+*.xcscmblueprint
+*.xccheckout
+
+# Swift Package Manager
+.swiftpm/
+.build/
