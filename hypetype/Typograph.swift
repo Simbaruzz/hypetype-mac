@@ -215,7 +215,67 @@ nonisolated enum Typograph {
 
         return s
     }
-    static func numbers(_ text: String, _ s: TypographSettings) -> String { text } // G6 — TODO
+    // MARK: - G6. Числа и валюта (§5)
+
+    static func numbers(_ text: String, _ settings: TypographSettings) -> String {
+        var s = text
+
+        // Копейки в сумму: "45 руб. 5 коп." → "45,05 ₽".
+        s = replaceMatches(s, #"(\d+)[ \x{00A0}]*руб\.?[ \x{00A0}]+(\d+)[ \x{00A0}]*коп\.?"#) { g in
+            let kop = g[2].count == 1 ? "0\(g[2])" : String(g[2].suffix(2))
+            return placeCurrency(number: "\(g[1]),\(kop)", symbol: "₽", settings)
+        }
+
+        let cur = #"(?:₽|\$|€|руб\.?|р\.|RUR|RUB|USD|usd|EUR|eur)"#
+        let noLetter = #"(?![А-Яа-яA-Za-z])"#
+        let num = #"(\d[\d\x{00A0} .,]*\d|\d)"#   // число с возможной НБ-группировкой
+
+        // Валюта ПЕРЕД числом: "$ 109", "руб 50".
+        s = replaceMatches(s, "(\(cur))\(noLetter)[ \u{00A0}]*\(num)") { g in
+            placeCurrency(number: g[2], symbol: symbol(for: g[1]), settings)
+        }
+        // Валюта ПОСЛЕ числа: "109$", "20usd", "2345123 $".
+        s = replaceMatches(s, "\(num)[ \u{00A0}]*(\(cur))\(noLetter)") { g in
+            placeCurrency(number: g[1], symbol: symbol(for: g[2]), settings)
+        }
+
+        return s
+    }
+
+    /// Валютный токен (символ/слово/код) → знак валюты.
+    private static func symbol(for token: String) -> String {
+        let low = token.lowercased()
+        if token == "₽" || low.hasPrefix("руб") || low == "р." || low == "rur" || low == "rub" { return "₽" }
+        if token == "$" || low == "usd" { return "$" }
+        if token == "€" || low == "eur" { return "€" }
+        return token
+    }
+
+    /// Нормализует число (десятичная точка→запятая, группировка ≥5 цифр) и ставит знак валюты.
+    private static func placeCurrency(number raw: String, symbol: String, _ settings: TypographSettings) -> String {
+        var n = raw.replacingOccurrences(of: "\u{00A0}", with: "").replacingOccurrences(of: " ", with: "")
+        n = n.replacingOccurrences(of: ".", with: ",")   // десятичная точка→запятая (валютный контекст)
+        let parts = n.split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+        var intPart = parts[0]
+        if intPart.count >= 5 { intPart = groupDigits(intPart) }
+        let normalized = parts.count > 1 ? "\(intPart),\(parts[1])" : intPart
+
+        switch settings.currencyPosition {
+        case .after:  return "\(normalized)\u{00A0}\(symbol)"
+        case .before: return "\(symbol)\u{00A0}\(normalized)"
+        }
+    }
+
+    /// Группировка разрядов по 3 справа, разделитель — НБ.
+    private static func groupDigits(_ s: String) -> String {
+        let chars = Array(s)
+        var out = ""
+        for (i, ch) in chars.enumerated() {
+            if i > 0 && (chars.count - i) % 3 == 0 { out += "\u{00A0}" }
+            out.append(ch)
+        }
+        return out
+    }
     static func nonBreaking(_ text: String) -> String { text }       // G5 — TODO
 
     // MARK: - Regex-хелпер
@@ -224,5 +284,27 @@ nonisolated enum Typograph {
         guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
         let range = NSRange(text.startIndex..., in: text)
         return re.stringByReplacingMatches(in: text, range: range, withTemplate: template)
+    }
+
+    /// Замена с замыканием: даёт строки всех capture-групп (g[0] — весь матч).
+    /// Нужна там, где замена не выразима шаблоном (группировка разрядов, копейки).
+    static func replaceMatches(_ text: String, _ pattern: String, _ transform: ([String]) -> String) -> String {
+        guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
+        let ns = text as NSString
+        var result = ""
+        var last = 0
+        re.enumerateMatches(in: text, range: NSRange(location: 0, length: ns.length)) { m, _, _ in
+            guard let m = m else { return }
+            result += ns.substring(with: NSRange(location: last, length: m.range.location - last))
+            var groups: [String] = []
+            for gi in 0..<m.numberOfRanges {
+                let r = m.range(at: gi)
+                groups.append(r.location == NSNotFound ? "" : ns.substring(with: r))
+            }
+            result += transform(groups)
+            last = m.range.location + m.range.length
+        }
+        result += ns.substring(with: NSRange(location: last, length: ns.length - last))
+        return result
     }
 }
