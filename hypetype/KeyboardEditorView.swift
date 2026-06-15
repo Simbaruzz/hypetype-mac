@@ -7,6 +7,9 @@
 
 import SwiftUI
 import Combine
+import OSLog
+
+private let log = Logger(subsystem: "hypetype", category: "KeyboardEditor")
 
 struct KeyboardEditorView: View {
     @Environment(\.dismiss) var dismiss
@@ -234,7 +237,7 @@ class KeyboardEditorViewModel: ObservableObject {
         // Перезагружаем в EventTapManager
         NotificationCenter.default.post(name: .mappingsDidChange, object: nil)
         
-        print("✅ Маппинг сохранён: \(keyInfo.label) → Normal: \(normal), Shift: \(shift)")
+        log.info("Mapping saved: \(keyInfo.label) → \(normal) / \(shift)")
     }
 }
 
