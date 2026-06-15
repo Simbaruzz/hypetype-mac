@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct KeyDef {
+nonisolated struct KeyDef {
     let w3cName: String        // W3C UI Events code (canonical key in config.ini)
     let macKeyCode: Int        // macOS CGEvent key code
     let displayLabel: String   // label shown on keyboard button
@@ -16,7 +16,7 @@ struct KeyDef {
     let defaultShift: String   // default symbol — Right Option + Shift
 }
 
-enum KeyDefinitions {
+nonisolated enum KeyDefinitions {
     // All 48 keys in row order matching §5 FORMAT.md table.
     // Rows: [0..<12] digit, [12..<24] QWERTY, [24..<36] ASDF, [36..<48] ZXCV+Space+Backquote
     static let all: [KeyDef] = [

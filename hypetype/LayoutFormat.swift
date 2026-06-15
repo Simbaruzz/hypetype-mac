@@ -9,9 +9,9 @@
 import Foundation
 import OSLog
 
-private let log = Logger(subsystem: "hypetype", category: "LayoutFormat")
+nonisolated enum LayoutFormat {
+    private static let log = Logger(subsystem: "hypetype", category: "LayoutFormat")
 
-enum LayoutFormat {
     /// Лимит кодпоинтов на одно значение (§4.2).
     static let maxCodepoints = 32
 

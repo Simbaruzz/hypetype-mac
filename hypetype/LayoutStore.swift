@@ -39,13 +39,14 @@ final class LayoutStore {
 
     // MARK: - Загрузка
 
-    /// Рантайм-словарь раскладки (macKeyCode-keyed) для EventTapManager и редактора.
+    /// Рантайм-словарь раскладки (macKeyCode-keyed) для редактора.
     func loadMappings() -> [Int: (normal: String, shift: String)] {
         loadLayout().toMacMappings()
     }
 
     /// Полная модель: config.ini → миграция config.json → дефолт.
-    private func loadLayout() -> Layout {
+    /// EventTapManager использует её, чтобы взять и раскладку, и таймаут диакритики ([macOS]).
+    func loadLayout() -> Layout {
         let fm = FileManager.default
 
         if fm.fileExists(atPath: iniURL.path) {
@@ -148,6 +149,9 @@ final class LayoutStore {
     // MARK: - Хелперы для UI
 
     var configPath: String { iniURL.path }
+
+    /// Папка с config.ini — за ней следит ConfigFileWatcher (авто-reload).
+    var configFolder: URL { folderURL }
 
     func revealConfigFile() {
         NSWorkspace.shared.activateFileViewerSelecting([iniURL])

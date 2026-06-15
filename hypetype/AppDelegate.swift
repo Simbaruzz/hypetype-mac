@@ -18,10 +18,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     weak var launchAtLoginMenuItem: NSMenuItem?
     var windowObserver: NSObjectProtocol?
     var permissionCheckTimer: Timer?
+    var configWatcher: ConfigFileWatcher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupMenuBar()
+        startConfigWatcher()
 
         if !checkAccessibilityPermissions() {
             startPermissionCheckTimer()
@@ -30,6 +32,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 startEventTap()
             }
         }
+    }
+
+    /// Авто-reload при внешней подмене config.ini (например, файл принесли с Windows).
+    /// Переиспользуем существующий канал: post .mappingsDidChange → EventTapManager перечитает.
+    func startConfigWatcher() {
+        configWatcher = ConfigFileWatcher(folder: LayoutStore.shared.configFolder) {
+            NotificationCenter.default.post(name: .mappingsDidChange, object: nil)
+        }
+        configWatcher?.start()
     }
 
     func setupMenuBar() {

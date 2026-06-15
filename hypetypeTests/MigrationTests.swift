@@ -85,6 +85,30 @@ struct MigrationTests {
         #expect(LayoutStore.layoutFromLegacyJSON(Data("not json".utf8)) == nil)
     }
 
+    // MARK: - Таймаут диакритики из [macOS] (§3.3)
+
+    @Test func readsDiacriticTimeoutFromMacOSSection() {
+        let text = """
+        [hypetype]
+        version=2
+
+        [Layout]
+        KeyE=20AC|2325
+
+        [macOS]
+        DiacriticTimeoutMs=2500
+        """
+        let layout = LayoutFormat.parse(text)
+        #expect(layout.diacriticTimeoutSeconds == 2.5)
+    }
+
+    @Test func diacriticTimeoutDefaultsWhenAbsent() {
+        // Файл без [macOS] (например, чисто виндовый) → дефолт 3 с.
+        let text = "[hypetype]\nversion=2\n\n[Layout]\nKeyE=20AC|2325\n\n[Windows]\nDiacriticTimeoutMs=9999\n"
+        let layout = LayoutFormat.parse(text)
+        #expect(layout.diacriticTimeoutSeconds == 3.0)   // [Windows] чужая — не читается
+    }
+
     @Test func skipsUnknownKeyCodes() {
         let data = legacyJSON([(0x0E, "€", "⌥"), (999, "X", "Y")])   // 999 нет в таблице
         let layout = LayoutStore.layoutFromLegacyJSON(data)

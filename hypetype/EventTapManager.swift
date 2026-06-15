@@ -25,6 +25,7 @@ class EventTapManager {
     private var waitingDiacritic = ""
     private var diacriticTimer: DispatchWorkItem?
     private var diacriticIndicator: DiacriticIndicatorWindow?
+    private var diacriticTimeout: TimeInterval = 3.0   // из [macOS] DiacriticTimeoutMs
 
     init() {
         self.symbolInserter = SymbolInserter(eventTapManager: self)
@@ -70,7 +71,7 @@ class EventTapManager {
             self?.cancelDiacriticMode()
         }
         diacriticTimer = timer
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: timer)
+        DispatchQueue.main.asyncAfter(deadline: .now() + diacriticTimeout, execute: timer)
     }
 
     private func cancelDiacriticMode() {
@@ -100,7 +101,9 @@ class EventTapManager {
     // MARK: - Lifecycle
 
     func start() {
-        mappings = LayoutStore.shared.loadMappings()
+        let layout = LayoutStore.shared.loadLayout()
+        mappings = layout.toMacMappings()
+        diacriticTimeout = layout.diacriticTimeoutSeconds
 
         let eventMask = (1 << CGEventType.keyDown.rawValue) |
                         (1 << CGEventType.keyUp.rawValue) |
@@ -140,8 +143,10 @@ class EventTapManager {
     }
 
     func reloadMappings() {
-        mappings = LayoutStore.shared.loadMappings()
-        log.info("Mappings reloaded: \(self.mappings.count)")
+        let layout = LayoutStore.shared.loadLayout()
+        mappings = layout.toMacMappings()
+        diacriticTimeout = layout.diacriticTimeoutSeconds
+        log.info("Mappings reloaded: \(self.mappings.count), diacritic timeout \(self.diacriticTimeout)s")
     }
 
     // MARK: - Event handling
