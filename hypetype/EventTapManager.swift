@@ -27,6 +27,9 @@ class EventTapManager {
     private var diacriticIndicator: DiacriticIndicatorWindow?
     private var diacriticTimeout: TimeInterval = 3.0   // из [macOS] DiacriticTimeoutMs
 
+    private var isTypographing = false                 // буферная операция типографа в процессе
+    private static let typographKeyCode = 0x33         // Backspace/Delete (R⌥+Backspace)
+
     init() {
         self.symbolInserter = SymbolInserter(eventTapManager: self)
         NotificationCenter.default.addObserver(
@@ -154,6 +157,17 @@ class EventTapManager {
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if symbolInserter.isInserting { return Unmanaged.passRetained(event) }
 
+        // Во время буферной операции типографа глотаем только повторные нажатия
+        // самого хоткея (Backspace), а синтетические Cmd+C/Cmd+V (другие keyCode)
+        // пропускаем — иначе R⌥+C превратился бы в © и т.п.
+        if isTypographing {
+            if type == .keyDown || type == .keyUp {
+                let kc = Int(event.getIntegerValueField(.keyboardEventKeycode))
+                if kc == Self.typographKeyCode { return nil }
+            }
+            return Unmanaged.passRetained(event)
+        }
+
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap = eventTap { CGEvent.tapEnable(tap: tap, enable: true) }
             log.warning("Event Tap re-enabled after system disable")
@@ -178,7 +192,7 @@ class EventTapManager {
 
         if type == .keyUp {
             let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
-            if rightOptionPressed && mappings[keyCode] != nil { return nil }
+            if rightOptionPressed && (mappings[keyCode] != nil || keyCode == Self.typographKeyCode) { return nil }
             return Unmanaged.passRetained(event)
         }
 
@@ -208,6 +222,14 @@ class EventTapManager {
                 }
             }
             return Unmanaged.passRetained(event)
+        }
+
+        // R⌥ + Backspace → типограф выделенного текста.
+        if keyCode == Self.typographKeyCode {
+            if event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
+                handleTypographHotkey()
+            }
+            return nil   // consume (заодно гасит автоповтор)
         }
 
         if let mapping = mappings[keyCode] {
@@ -262,5 +284,82 @@ class EventTapManager {
 
         guard status == noErr, length > 0 else { return nil }
         return String(utf16CodeUnits: chars, count: length)
+    }
+
+    // MARK: - Типограф (R⌥+Backspace) — буферная механика (TYPOGRAPH.md §2)
+
+    private func handleTypographHotkey() {
+        let pb = NSPasteboard.general
+        let saved = savePasteboard(pb)
+        let savedChange = pb.changeCount
+
+        isTypographing = true
+        pb.clearContents()
+        sendCommandKey(0x08)   // Cmd+C — скопировать выделение
+
+        // Ждём, пока приложение положит выделение в буфер.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+            guard let self = self else { return }
+
+            guard pb.changeCount != savedChange,
+                  let text = pb.string(forType: .string), !text.isEmpty else {
+                // Ничего не выделено — буфер не тронут.
+                self.restorePasteboard(pb, saved)
+                FlashTip.show("Выделите текст")
+                self.isTypographing = false
+                return
+            }
+
+            var result = text
+            if SettingsManager.shared.useYofikator {
+                result = Yofikator.shared.yoficate(result)
+            }
+            result = Typograph.run(result)
+
+            if result == text {
+                self.restorePasteboard(pb, saved)
+                FlashTip.show("Уже типографировано ✓")
+                self.isTypographing = false
+                return
+            }
+
+            pb.clearContents()
+            pb.setString(result, forType: .string)
+            self.sendCommandKey(0x09)   // Cmd+V — вставить результат
+
+            // Даём приложению прочитать буфер до его восстановления.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                self.restorePasteboard(pb, saved)
+                FlashTip.show("Типографировано ✓")
+                self.isTypographing = false
+            }
+        }
+    }
+
+    /// Снимок всего буфера (все типы/элементы) для восстановления.
+    private func savePasteboard(_ pb: NSPasteboard) -> [NSPasteboardItem] {
+        pb.pasteboardItems?.map { item in
+            let copy = NSPasteboardItem()
+            for type in item.types {
+                if let data = item.data(forType: type) { copy.setData(data, forType: type) }
+            }
+            return copy
+        } ?? []
+    }
+
+    private func restorePasteboard(_ pb: NSPasteboard, _ items: [NSPasteboardItem]) {
+        pb.clearContents()
+        if !items.isEmpty { pb.writeObjects(items) }
+    }
+
+    /// Синтетический аккорд Cmd+<key> (C=0x08, V=0x09).
+    private func sendCommandKey(_ keyCode: CGKeyCode) {
+        let source = CGEventSource(stateID: .hidSystemState)
+        let down = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
+        down?.flags = .maskCommand
+        down?.post(tap: .cghidEventTap)
+        let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
+        up?.flags = .maskCommand
+        up?.post(tap: .cghidEventTap)
     }
 }

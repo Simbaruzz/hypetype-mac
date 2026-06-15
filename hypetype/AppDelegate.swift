@@ -16,6 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var editorWindow: NSWindow?
     weak var enabledMenuItem: NSMenuItem?
     weak var launchAtLoginMenuItem: NSMenuItem?
+    weak var yofikatorMenuItem: NSMenuItem?
     var windowObserver: NSObjectProtocol?
     var permissionCheckTimer: Timer?
     var configWatcher: ConfigFileWatcher?
@@ -68,6 +69,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(launchAtLoginItem)
         self.launchAtLoginMenuItem = launchAtLoginItem
 
+        let yofikatorItem = NSMenuItem(title: "Ёфикатор (е→ё)", action: #selector(toggleYofikator), keyEquivalent: "")
+        yofikatorItem.state = settingsManager.useYofikator ? .on : .off
+        menu.addItem(yofikatorItem)
+        self.yofikatorMenuItem = yofikatorItem
+
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Редактировать...", action: #selector(openKeyboardEditor), keyEquivalent: "e"))
         menu.addItem(NSMenuItem(title: "Открыть папку настроек", action: #selector(openConfigFolder), keyEquivalent: ""))
@@ -87,6 +93,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             eventTapManager?.stop()
         }
+    }
+
+    @objc func toggleYofikator() {
+        settingsManager.useYofikator.toggle()
+        yofikatorMenuItem?.state = settingsManager.useYofikator ? .on : .off
     }
 
     @objc func quit() {
