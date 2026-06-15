@@ -61,4 +61,22 @@ struct TypographQuotesTests {
         check("«это деньги.»", "«это деньги».")
         check("«сумма,»", "«сумма»,")
     }
+
+    // macOS «умные кавычки»: система подменяет " на “…” до типографа.
+    @Test func smartCurlyDoublesToGuillemets() {
+        check("\u{201C}привет\u{201D}", "«привет»")
+        check("\u{201C}спросил как дела?\u{201D}", "«спросил как дела?»")
+    }
+
+    @Test func smartCurlyInchAfterDigit() {
+        check("монитор 21\u{201D}", "монитор 21\"")   // фигурная закрывающая после цифры → дюйм
+    }
+}
+
+struct TypographQuotesPipelineTests {
+    // Регрессия из ручного теста: пробел после двоеточия не должен съедаться
+    // перед открывающей кавычкой (была проблема со «смарт-кавычкой» как закрывающей).
+    @Test func spacePreservedBeforeOpeningQuote() {
+        #expect(Typograph.run("пришёл: \u{201C}текст\u{201D}") == "пришёл: «текст»")
+    }
 }

@@ -124,7 +124,13 @@ nonisolated enum Typograph {
     // MARK: - G1. Автомат кавычек (§4)
 
     static func quotesAutomaton(_ text: String) -> String {
-        let chars = Array(text)
+        // macOS «умные кавычки» подменяют прямые " на английские фигурные “…” ещё до
+        // нашего типографа. Нормализуем их в прямые ", чтобы автомат классифицировал
+        // по контексту (открывающая/закрывающая), а не считал “ русской внутренней.
+        let normalized = text
+            .replacingOccurrences(of: "\u{201C}", with: "\"")   // “
+            .replacingOccurrences(of: "\u{201D}", with: "\"")   // ”
+        let chars = Array(normalized)
         var out: [Character] = []
         out.reserveCapacity(chars.count)
         var depth = 0   // 0 — вне; 1 — внутри «…»; 2 — внутри „…“
@@ -145,7 +151,6 @@ nonisolated enum Typograph {
             // Уже стоящие кавычки двигают состояние, но не заменяются (идемпотентность).
             case "«": depth = 1; out.append(c)
             case "„": depth = 2; out.append(c)
-            case "“": depth = 1; out.append(c)
             case "»": depth = 0; out.append(c)
 
             case "\"":
