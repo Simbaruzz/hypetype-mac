@@ -121,7 +121,78 @@ nonisolated enum Typograph {
 
     // MARK: - Заглушки (реализуются следующими шагами)
 
-    static func quotesAutomaton(_ text: String) -> String { text }   // G1 — TODO
+    // MARK: - G1. Автомат кавычек (§4)
+
+    static func quotesAutomaton(_ text: String) -> String {
+        let chars = Array(text)
+        var out: [Character] = []
+        out.reserveCapacity(chars.count)
+        var depth = 0   // 0 — вне; 1 — внутри «…»; 2 — внутри „…“
+
+        func isSpace(_ c: Character?) -> Bool { c.map { $0.isWhitespace } ?? false }
+        func isDash(_ c: Character) -> Bool { c == "—" || c == "–" || c == "-" }
+        func isLatinLetter(_ c: Character?) -> Bool {
+            guard let c = c, let a = c.unicodeScalars.first, c.unicodeScalars.count == 1 else { return false }
+            return (a.value >= 65 && a.value <= 90) || (a.value >= 97 && a.value <= 122)
+        }
+
+        for i in chars.indices {
+            let c = chars[i]
+            let prev: Character? = i > 0 ? chars[i - 1] : nil
+            let next: Character? = i < chars.count - 1 ? chars[i + 1] : nil
+
+            switch c {
+            // Уже стоящие кавычки двигают состояние, но не заменяются (идемпотентность).
+            case "«": depth = 1; out.append(c)
+            case "„": depth = 2; out.append(c)
+            case "“": depth = 1; out.append(c)
+            case "»": depth = 0; out.append(c)
+
+            case "\"":
+                // Дюйм-эвристика (приоритетная): " сразу после цифры — знак дюйма.
+                if let p = prev, p.isNumber {
+                    out.append(c)
+                    break
+                }
+                let canOpen = (prev == nil || isSpace(prev) || prev == "(" || prev == "[" || (prev.map(isDash) ?? false))
+                            && (next != nil && !isSpace(next))
+                let canClose = (prev != nil && !isSpace(prev))
+                            && (next == nil || isSpace(next) || ".,!?;:)]".contains(next!))
+                let opening: Bool
+                if canOpen && !canClose { opening = true }
+                else if canClose && !canOpen { opening = false }
+                else { opening = depth == 0 }   // неоднозначно → по состоянию
+
+                if opening {
+                    switch depth {
+                    case 0: out.append("«"); depth = 1
+                    case 1: out.append("„"); depth = 2
+                    default: out.append(c)         // глубже 2 — оставляем "
+                    }
+                } else {
+                    switch depth {
+                    case 2: out.append("“"); depth = 1
+                    case 1: out.append("»"); depth = 0
+                    default: out.append(c)         // нечего закрывать — оставляем "
+                    }
+                }
+
+            case "'":
+                // Апостроф внутри латинского слова (it's, d'Artagnan) → ’. Штрихи после цифры — нет.
+                if isLatinLetter(prev) && isLatinLetter(next) {
+                    out.append("’")
+                } else {
+                    out.append(c)
+                }
+
+            default:
+                out.append(c)
+            }
+        }
+
+        // Точка/запятая, оказавшаяся перед закрывающей «ёлочкой», выносится наружу (стиль SBOL).
+        return replace(String(out), #"([.,])(»)"#, "$2$1")
+    }
     static func dashes(_ text: String) -> String { text }            // G2 — TODO
     static func numbers(_ text: String, _ s: TypographSettings) -> String { text } // G6 — TODO
     static func nonBreaking(_ text: String) -> String { text }       // G5 — TODO
