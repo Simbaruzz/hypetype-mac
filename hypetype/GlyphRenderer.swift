@@ -8,7 +8,9 @@
 
 import Foundation
 
-enum GlyphRenderer {
+// Чистый рендерер — вызывается из слоя формата на любом потоке, поэтому nonisolated
+// (в проекте включён режим MainActor-by-default).
+nonisolated enum GlyphRenderer {
     /// Носитель для комбинирующей диакритики — DOTTED CIRCLE (U+25CC).
     private static let carrier = "\u{25CC}"
 

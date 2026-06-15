@@ -91,7 +91,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func openConfigFolder() {
-        let configPath = MappingManager.shared.getConfigPath()
+        let configPath = LayoutStore.shared.configPath
         let folderPath = (configPath as NSString).deletingLastPathComponent
         if let url = URL(string: "file://\(folderPath)") {
             NSWorkspace.shared.open(url)

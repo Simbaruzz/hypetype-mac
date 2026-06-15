@@ -57,3 +57,46 @@ struct Layout: Equatable {
     /// Есть ли валидная версия формата v2+ (иначе — кандидат на миграцию).
     var isLegacy: Bool { version < 2 }
 }
+
+// MARK: - Мост к рантайму (macKeyCode ⇄ W3C)
+
+extension Layout {
+    /// Дефолтная раскладка: W3C-ключи из KeyDefinitions + платформенный таймаут диакритики.
+    static var standard: Layout {
+        var layout = Layout(version: 2)
+        for def in KeyDefinitions.all {
+            let value = LayoutValue(alt: Array(def.defaultNormal.unicodeScalars),
+                                    altShift: Array(def.defaultShift.unicodeScalars))
+            if !value.isEmpty { layout.entries[def.w3cName] = value }
+        }
+        layout.platformSettings = [SettingEntry(key: "DiacriticTimeoutMs", value: "3000")]
+        return layout
+    }
+
+    /// Проекция в рантайм-словарь, которым оперируют EventTapManager и редактор.
+    /// macKeyCode — внутренняя колонка трансляции (PLAN §1, Этап 2 шаг 5).
+    func toMacMappings() -> [Int: (normal: String, shift: String)] {
+        var result: [Int: (normal: String, shift: String)] = [:]
+        for def in KeyDefinitions.all {
+            guard let value = entries[def.w3cName] else { continue }
+            result[def.macKeyCode] = (String(String.UnicodeScalarView(value.alt)),
+                                      String(String.UnicodeScalarView(value.altShift)))
+        }
+        return result
+    }
+
+    /// Обновляет known-ключи из рантайм-словаря, сохраняя версию, чужие секции,
+    /// неизвестные ключи и платформенные настройки (round-trip §7).
+    mutating func applyMacMappings(_ mappings: [Int: (normal: String, shift: String)]) {
+        for def in KeyDefinitions.all {
+            guard let m = mappings[def.macKeyCode] else { continue }
+            let value = LayoutValue(alt: Array(m.normal.unicodeScalars),
+                                    altShift: Array(m.shift.unicodeScalars))
+            if value.isEmpty {
+                entries[def.w3cName] = nil    // §4.5: пустая клавиша = отсутствие
+            } else {
+                entries[def.w3cName] = value
+            }
+        }
+    }
+}

@@ -200,7 +200,7 @@ class KeyboardEditorViewModel: ObservableObject {
     let zxcvRow: [KeyInfo]
 
     init() {
-        mappings = MappingManager.shared.loadMappings()
+        mappings = LayoutStore.shared.loadMappings()
 
         func makeRow(_ slice: ArraySlice<KeyDef>) -> [KeyInfo] {
             slice.map { KeyInfo(keyCode: $0.macKeyCode, label: $0.displayLabel) }
@@ -232,7 +232,7 @@ class KeyboardEditorViewModel: ObservableObject {
         keyInfo.shiftSymbol = shift
         
         // Сохраняем в файл
-        MappingManager.shared.saveMappings(mappings)
+        LayoutStore.shared.saveMappings(mappings)
         
         // Перезагружаем в EventTapManager
         NotificationCenter.default.post(name: .mappingsDidChange, object: nil)

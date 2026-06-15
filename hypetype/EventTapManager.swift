@@ -100,7 +100,7 @@ class EventTapManager {
     // MARK: - Lifecycle
 
     func start() {
-        mappings = MappingManager.shared.loadMappings()
+        mappings = LayoutStore.shared.loadMappings()
 
         let eventMask = (1 << CGEventType.keyDown.rawValue) |
                         (1 << CGEventType.keyUp.rawValue) |
@@ -140,7 +140,7 @@ class EventTapManager {
     }
 
     func reloadMappings() {
-        mappings = MappingManager.shared.loadMappings()
+        mappings = LayoutStore.shared.loadMappings()
         log.info("Mappings reloaded: \(self.mappings.count)")
     }
 
