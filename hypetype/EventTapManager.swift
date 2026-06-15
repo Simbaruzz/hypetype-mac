@@ -194,29 +194,6 @@ class EventTapManager {
         print("🔄 Маппинги перезагружены: \(mappings.count) символов")
     }
     
-    // MARK: - State Management
-    
-    /// Принудительный сброс состояния (защита от залипания)
-    func resetState() {
-        let hadState = rightOptionPressed || shiftPressed || isDiacriticMode
-        
-        if hadState {
-            print("🔄 СБРОС СОСТОЯНИЯ:")
-            print("   rightOptionPressed: \(rightOptionPressed) → false")
-            print("   shiftPressed: \(shiftPressed) → false")
-            if isDiacriticMode {
-                print("   isDiacriticMode: true → false")
-            }
-        }
-        
-        rightOptionPressed = false
-        shiftPressed = false
-        
-        if isDiacriticMode {
-            cancelDiacriticMode()
-        }
-    }
-    
     private func handleEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         // ВАЖНО: Игнорируем все события пока вставляем символ (защита от зацикливания)
         if symbolInserter.isInserting {
@@ -419,11 +396,6 @@ class SymbolInserter {
     // Слабая ссылка на EventTapManager для сброса флагов
     private weak var eventTapManager: EventTapManager?
     
-    // ✅ ОПТИМИЗАЦИЯ: Кеш для проверки нужен ли clipboard метод
-    // Большинство символов повторяются, поэтому кешируем результаты
-    private var clipboardCache: [String: Bool] = [:]
-    private let maxCacheSize = 100
-    
     init(eventTapManager: EventTapManager) {
         self.eventTapManager = eventTapManager
     }
@@ -444,30 +416,6 @@ class SymbolInserter {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             self?.isInserting = false
         }
-    }
-    
-    // ✅ ОПТИМИЗАЦИЯ: Быстрая O(1) проверка вместо contains(where:) O(n)
-    // Проверяет только ПЕРВЫЙ scalar — в 99% случаев достаточно
-    private func needsClipboard(_ symbol: String) -> Bool {
-        // Проверяем кеш
-        if let cached = clipboardCache[symbol] {
-            return cached
-        }
-        
-        // Проверяем первый scalar (обычно этого достаточно)
-        guard let first = symbol.unicodeScalars.first else {
-            return false
-        }
-        
-        let result = first.value > 0xFFFF
-        
-        // Сохраняем в кеш с ограничением размера
-        if clipboardCache.count >= maxCacheSize {
-            clipboardCache.removeAll(keepingCapacity: true)
-        }
-        clipboardCache[symbol] = result
-        
-        return result
     }
     
     // ВСПОМОГАТЕЛЬНЫЙ МЕТОД: Вставка через буфер обмена

@@ -13,9 +13,7 @@ struct hypetypeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
-        Settings {
-            SettingsView()
-        }
+        Settings { EmptyView() }
     }
 }
 // MARK: - App Delegate
@@ -322,111 +320,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
     
-    // MARK: - Menu Bar Icon
-    
-    func createMenuBarIcon() -> NSImage? {
-        // Попытка 1: Из Assets через NSImage(named:)
-        let possibleNames = ["MenuBarIcon", "icon", "Icon", "AppIcon"]
-        
-        for name in possibleNames {
-            if let icon = NSImage(named: name) {
-                print("✅ Иконка найдена в Assets: \(name)")
-                icon.size = NSSize(width: 18, height: 18)
-                icon.isTemplate = true
-                return icon
-            }
-        }
-        
-        // Попытка 2: Загрузить PDF из Bundle (если добавлено как Resource)
-        if let path = Bundle.main.path(forResource: "icon", ofType: "pdf"),
-           let icon = NSImage(contentsOfFile: path) {
-            print("✅ PDF иконка загружена из Bundle")
-            icon.size = NSSize(width: 18, height: 18)
-            icon.isTemplate = true
-            return icon
-        }
-        
-        print("⚠️ Иконка не найдена в Assets или Bundle, используем текстовую иконку '⌥'")
-        
-        // Fallback: текстовая иконка (это тоже OK!)
-        return createSimpleTextIcon()
-    }
-    
-    func createSimpleTextIcon() -> NSImage {
-        let size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: size)
-        
-        image.lockFocus()
-        
-        // Рисуем текст "⌥" как иконку
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 16, weight: .medium),
-            .foregroundColor: NSColor.labelColor
-        ]
-        
-        let text = "⌥" as NSString
-        let textSize = text.size(withAttributes: attributes)
-        let rect = NSRect(
-            x: (size.width - textSize.width) / 2,
-            y: (size.height - textSize.height) / 2,
-            width: textSize.width,
-            height: textSize.height
-        )
-        
-        text.draw(in: rect, withAttributes: attributes)
-        
-        image.unlockFocus()
-        image.isTemplate = true
-        
-        return image
-    }
-}
-
-// MARK: - Settings View
-
-struct SettingsView: View {
-    @ObservedObject var settings = SettingsManager.shared
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "keyboard")
-                .font(.system(size: 60))
-                .foregroundColor(.accentColor)
-            
-            Text("HypeType для macOS")
-                .font(.title)
-            
-            Text("Версия 1.0 • 40+ символов")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Divider()
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Примеры комбинаций:")
-                    .font(.headline)
-                
-                Group {
-                    Text("⌥ , → «  ⌥ . → »  (кавычки)")
-                    Text("⌥ - → —  ⌥⇧ - → –  (тире)")
-                    Text("⌥ E → €  ⌥ H → ₽  (валюты)")
-                    Text("⌥ 1 → ¹  ⌥ 2 → ²  (индексы)")
-                    Text("⌥ X → ×  ⌥ A → ≈  (математика)")
-                }
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.secondary)
-            }
-            
-            Divider()
-            
-            Text("💡 Прямой ввод символов — быстро и не трогает буфер обмена")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Spacer()
-        }
-        .padding(30)
-        .frame(width: 450, height: 400)
-    }
 }
 

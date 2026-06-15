@@ -105,28 +105,3 @@ struct KeyCodeMapper {
     }
 }
 
-// MARK: - Usage Example
-
-/*
- 
- 💡 КАК ДОБАВИТЬ НОВЫЙ МАППИНГ
- 
- В EventTapManager.swift найдите testMappings и добавьте:
- 
- ```swift
- private let testMappings: [Int: (normal: String, shift: String)] = [
-     // Существующие...
-     0x21: ("«", "„"),
-     
-     // Добавьте новый:
-     0x18: ("≈", "≠"),  // = key → ≈ (приблизительно), ≠ (не равно)
- ]
- ```
- 
- Или используя extension:
- 
- ```swift
- 0x18: ("≈", "≠"),  // \(0x18.keyName) key
- ```
- 
- */

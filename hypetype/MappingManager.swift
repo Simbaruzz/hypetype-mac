@@ -334,29 +334,4 @@ class MappingManager {
         }
     }
     
-    // ТЕСТ: Принудительно создать файл с тестовым содержимым
-    func forceCreateTestFile() -> Bool {
-        print("🧪 ТЕСТ: Принудительное создание файла...")
-        print("   Путь: \(configURL.path)")
-        
-        let testContent = "TEST FILE CREATED"
-        
-        do {
-            try testContent.write(to: configURL, atomically: true, encoding: .utf8)
-            print("   ✅ Тестовый файл создан!")
-            
-            // Проверяем существование
-            if FileManager.default.fileExists(atPath: configURL.path) {
-                print("   ✅ Файл подтверждён!")
-                return true
-            } else {
-                print("   ❌ Файл НЕ найден после создания!")
-                return false
-            }
-        } catch {
-            print("   ❌ Ошибка создания: \(error)")
-            print("   Детали: \(error.localizedDescription)")
-            return false
-        }
-    }
 }
