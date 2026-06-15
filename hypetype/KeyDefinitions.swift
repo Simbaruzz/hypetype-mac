@@ -77,6 +77,9 @@ enum KeyDefinitions {
     // Lookup by macKeyCode
     static let byMacKeyCode: [Int: KeyDef] = Dictionary(uniqueKeysWithValues: all.map { ($0.macKeyCode, $0) })
 
+    // Lookup by W3C name (canonical key in config.ini)
+    static let byW3CName: [String: KeyDef] = Dictionary(uniqueKeysWithValues: all.map { ($0.w3cName, $0) })
+
     // Default layout: macKeyCode → (normal, shift)
     static var defaultLayout: [Int: (normal: String, shift: String)] {
         Dictionary(uniqueKeysWithValues: all.map { ($0.macKeyCode, ($0.defaultNormal, $0.defaultShift)) })
