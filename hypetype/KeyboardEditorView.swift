@@ -42,6 +42,10 @@ struct KeyboardEditorView: View {
                 Text("Если символ нарисован в верхней части кнопки, значит нужно нажать ещё и Shift, например ⌥ + ⇧ + С даст ¢")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
+
+                Text("Чтобы воспользоваться автотипографом → выделите текст и нажмите Option + Backspace")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)                    
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 40)

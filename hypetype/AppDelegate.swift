@@ -69,7 +69,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(launchAtLoginItem)
         self.launchAtLoginMenuItem = launchAtLoginItem
 
-        let yofikatorItem = NSMenuItem(title: "Ёфикатор (е→ё)", action: #selector(toggleYofikator), keyEquivalent: "")
+        let yofikatorItem = NSMenuItem(title: "Ёфикатор", action: #selector(toggleYofikator), keyEquivalent: "")
         yofikatorItem.state = settingsManager.useYofikator ? .on : .off
         menu.addItem(yofikatorItem)
         self.yofikatorMenuItem = yofikatorItem
