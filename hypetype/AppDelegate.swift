@@ -107,7 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func openGitHub() {
-        if let url = URL(string: "https://github.com/Simbaruzz/hypetype") {
+        if let url = URL(string: "https://github.com/Simbaruzz/hypetype-mac") {
             NSWorkspace.shared.open(url)
         }
     }
