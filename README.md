@@ -40,7 +40,7 @@
 
 Теоретически совместимо с macOS Ventura 13 и выше. Но я тестировал только macOS Sequoia 15 и Tahoe 26.
 
-1. Скачиваем [hypetype.zip](https://github.com/Simbaruzz/hypetype-mac/releases/latest/download/hypetype.zip) ≈250 Kb
+1. Скачиваем [hypetype.zip](https://github.com/Simbaruzz/hypetype-mac/releases/latest/download/hypetype.zip) ≈350 Kb
 2. Лучше всего положить архив по умолчанию в «Загрузки» Downloads
 3. Открываем архив двойным кликом. По умолчанию он распакуется тут же в «Загрузках»
 4. Открываем «Терминал».
