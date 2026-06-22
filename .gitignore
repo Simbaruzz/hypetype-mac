@@ -19,3 +19,9 @@ DerivedData/
 readme-2.md
 readme-old.md
 release-*.md
+
+# Разработческие документы и виндовый исходник словаря — только локально
+DOCS/
+PLAN.md
+TYPOGRAPH.md
+yodict.ahk
