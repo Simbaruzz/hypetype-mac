@@ -67,10 +67,11 @@ class SymbolInserter {
         } ?? []
         let savedChangeCount = pasteboard.changeCount
 
-        pasteboard.clearContents()
-        pasteboard.setString(symbol, forType: .string)
-        // HTML-обёртка для ProseMirror-редакторов (иначе whitespace нормализуется)
-        pasteboard.setString("<span>\(symbol)</span>", forType: .html)
+        // Запись с маркерами «не пиши в историю» — Spotlight Clipboard History (Tahoe)
+        // и сторонние менеджеры (по конвенции nspasteboard.org) её пропускают.
+        // HTML-обёртка остаётся — нужна для ProseMirror-редакторов (иначе whitespace
+        // нормализуется).
+        PasteboardPrivacy.writePrivateWithHTML(symbol, to: pasteboard)
 
         simulateCommandV()
 
@@ -78,10 +79,9 @@ class SymbolInserter {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             guard pasteboard.changeCount == savedChangeCount + 1,
                   pasteboard.string(forType: .string) == symbol else { return }
-            pasteboard.clearContents()
-            if !savedItems.isEmpty {
-                pasteboard.writeObjects(savedItems)
-            }
+            // С маркерами — иначе восстановление картинки/файла даёт дубль в
+            // Spotlight Clipboard History (см. PasteboardPrivacy.restorePrivate).
+            PasteboardPrivacy.restorePrivate(savedItems, to: pasteboard)
         }
     }
 

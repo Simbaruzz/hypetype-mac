@@ -291,48 +291,75 @@ class EventTapManager {
     private func handleTypographHotkey() {
         let pb = NSPasteboard.general
         let saved = savePasteboard(pb)
-        let savedChange = pb.changeCount
 
         isTypographing = true
         pb.clearContents()
+        // savedChange фиксируем ПОСЛЕ clearContents — иначе сам clearContents
+        // бампает changeCount, и polling ловит «свой» инкремент вместо Cmd+C.
+        let savedChange = pb.changeCount
         sendCommandKey(0x08)   // Cmd+C — скопировать выделение
 
-        // Ждём, пока приложение положит выделение в буфер.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
-            guard let self = self else { return }
+        // Polling вместо фиксированной задержки: как только целевое приложение
+        // бампнуло changeCount — мгновенно перезаписываем pb с маркерами.
+        // Окно гонки со Spotlight Clipboard History — единицы миллисекунд.
+        pollForCopy(pb: pb, savedChange: savedChange, saved: saved, attemptsLeft: 250)
+    }
 
-            guard pb.changeCount != savedChange,
-                  let text = pb.string(forType: .string), !text.isEmpty else {
-                // Ничего не выделено — буфер не тронут.
-                self.restorePasteboard(pb, saved)
+    /// Ждёт, пока Cmd+C запишет выделение в pb (через polling changeCount),
+    /// и сразу же помечает запись маркерами «не пиши в историю».
+    private func pollForCopy(
+        pb: NSPasteboard,
+        savedChange: Int,
+        saved: [NSPasteboardItem],
+        attemptsLeft: Int
+    ) {
+        if pb.changeCount != savedChange {
+            // Cmd+C сработал — читаем выделение и сразу помечаем.
+            guard let text = pb.string(forType: .string), !text.isEmpty else {
+                restorePasteboard(pb, saved)
                 FlashTip.show("Выделите текст")
-                self.isTypographing = false
+                isTypographing = false
                 return
             }
+            PasteboardPrivacy.writePrivate(text, to: pb)
+            processCopiedText(text, pb: pb, saved: saved)
+            return
+        }
+        if attemptsLeft == 0 {
+            // Таймаут (~500 мс при шаге 2 мс) — ничего не скопировано.
+            restorePasteboard(pb, saved)
+            FlashTip.show("Выделите текст")
+            isTypographing = false
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.002) { [weak self] in
+            self?.pollForCopy(pb: pb, savedChange: savedChange, saved: saved, attemptsLeft: attemptsLeft - 1)
+        }
+    }
 
-            var result = text
-            if SettingsManager.shared.useYofikator {
-                result = Yofikator.shared.yoficate(result)
-            }
-            result = Typograph.run(result)
+    private func processCopiedText(_ text: String, pb: NSPasteboard, saved: [NSPasteboardItem]) {
+        var result = text
+        if SettingsManager.shared.useYofikator {
+            result = Yofikator.shared.yoficate(result)
+        }
+        result = Typograph.run(result)
 
-            if result == text {
-                self.restorePasteboard(pb, saved)
-                FlashTip.show("Уже типографировано ✓")
-                self.isTypographing = false
-                return
-            }
+        if result == text {
+            restorePasteboard(pb, saved)
+            FlashTip.show("Уже типографировано ✓")
+            isTypographing = false
+            return
+        }
 
-            pb.clearContents()
-            pb.setString(result, forType: .string)
-            self.sendCommandKey(0x09)   // Cmd+V — вставить результат
+        PasteboardPrivacy.writePrivate(result, to: pb)
+        sendCommandKey(0x09)   // Cmd+V — вставить результат
 
-            // Даём приложению прочитать буфер до его восстановления.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                self.restorePasteboard(pb, saved)
-                FlashTip.show("Типографировано ✓")
-                self.isTypographing = false
-            }
+        // Даём приложению прочитать буфер до его восстановления.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self = self else { return }
+            self.restorePasteboard(pb, saved)
+            FlashTip.show("Типографировано ✓")
+            self.isTypographing = false
         }
     }
 
@@ -348,8 +375,10 @@ class EventTapManager {
     }
 
     private func restorePasteboard(_ pb: NSPasteboard, _ items: [NSPasteboardItem]) {
-        pb.clearContents()
-        if !items.isEmpty { pb.writeObjects(items) }
+        // С маркерами «не пиши в историю» — иначе восстановление картинки/файла даёт
+        // дубль в Spotlight Clipboard History (текст там дедуплицируется, бинарные —
+        // нет). Оригинал уже в истории, повторная запись не нужна.
+        PasteboardPrivacy.restorePrivate(items, to: pb)
     }
 
     /// Синтетический аккорд Cmd+<key> (C=0x08, V=0x09).
