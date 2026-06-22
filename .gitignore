@@ -14,3 +14,8 @@ DerivedData/
 # Swift Package Manager
 .swiftpm/
 .build/
+
+# Локальные черновики (для работы, не для репозитория)
+readme-2.md
+readme-old.md
+release-*.md
