@@ -28,7 +28,7 @@ nonisolated enum KeyDefinitions {
         KeyDef(w3cName: "Digit5",       macKeyCode: 0x17, displayLabel: "5",   defaultNormal: "\u{2030}", defaultShift: "\u{0020}"),
         KeyDef(w3cName: "Digit6",       macKeyCode: 0x16, displayLabel: "6",   defaultNormal: "\u{2191}", defaultShift: "\u{0302}"),
         KeyDef(w3cName: "Digit7",       macKeyCode: 0x1A, displayLabel: "7",   defaultNormal: "\u{2197}", defaultShift: "\u{00BF}"),
-        KeyDef(w3cName: "Digit8",       macKeyCode: 0x1C, displayLabel: "8",   defaultNormal: "\u{221E}", defaultShift: "\u{0020}"),
+        KeyDef(w3cName: "Digit8",       macKeyCode: 0x1C, displayLabel: "8",   defaultNormal: "\u{221E}", defaultShift: "\u{2194}"),
         KeyDef(w3cName: "Digit9",       macKeyCode: 0x19, displayLabel: "9",   defaultNormal: "\u{2190}", defaultShift: "\u{2039}"),
         KeyDef(w3cName: "Digit0",       macKeyCode: 0x1D, displayLabel: "0",   defaultNormal: "\u{2192}", defaultShift: "\u{203A}"),
         KeyDef(w3cName: "Minus",        macKeyCode: 0x1B, displayLabel: "-",   defaultNormal: "\u{2014}", defaultShift: "\u{2013}"),
