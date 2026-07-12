@@ -34,7 +34,10 @@ enum PasteboardPrivacy {
         pasteboard.clearContents()
         let item = NSPasteboardItem()
         item.setString(text, forType: .string)
-        item.setString("<span>\(text)</span>", forType: .html)
+        // <meta charset> обязателен: без него нативный HTML-импортёр Apple Notes
+        // угадывает кодировку и на русской системе берёт Windows-1251 — тогда UTF-8
+        // байты неразрывного пробела (0xC2 0xA0) читаются как «В» + пробел.
+        item.setString("<meta charset=\"utf-8\"><span>\(text)</span>", forType: .html)
         attachMarkers(to: item)
         pasteboard.writeObjects([item])
     }
