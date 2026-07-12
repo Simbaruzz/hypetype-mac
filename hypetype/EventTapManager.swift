@@ -118,7 +118,7 @@ class EventTapManager {
             options: .defaultTap,
             eventsOfInterest: CGEventMask(eventMask),
             callback: { (_, type, event, refcon) -> Unmanaged<CGEvent>? in
-                guard let refcon = refcon else { return Unmanaged.passRetained(event) }
+                guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
                 let manager = Unmanaged<EventTapManager>.fromOpaque(refcon).takeUnretainedValue()
                 return manager.handleEvent(type: type, event: event)
             },
@@ -155,7 +155,7 @@ class EventTapManager {
     // MARK: - Event handling
 
     private func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        if symbolInserter.isInserting { return Unmanaged.passRetained(event) }
+        if symbolInserter.isInserting { return Unmanaged.passUnretained(event) }
 
         // Во время буферной операции типографа глотаем только повторные нажатия
         // самого хоткея (Backspace), а синтетические Cmd+C/Cmd+V (другие keyCode)
@@ -165,13 +165,13 @@ class EventTapManager {
                 let kc = Int(event.getIntegerValueField(.keyboardEventKeycode))
                 if kc == Self.typographKeyCode { return nil }
             }
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
 
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap = eventTap { CGEvent.tapEnable(tap: tap, enable: true) }
             log.warning("Event Tap re-enabled after system disable")
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
 
         if type == .flagsChanged {
@@ -187,20 +187,20 @@ class EventTapManager {
                 }
             }
             shiftPressed = flags.contains(.maskShift)
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
 
         if type == .keyUp {
             let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
             if rightOptionPressed && (mappings[keyCode] != nil || keyCode == Self.typographKeyCode) { return nil }
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
 
-        guard type == .keyDown else { return Unmanaged.passRetained(event) }
+        guard type == .keyDown else { return Unmanaged.passUnretained(event) }
 
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
 
-        guard SettingsManager.shared.isEnabled else { return Unmanaged.passRetained(event) }
+        guard SettingsManager.shared.isEnabled else { return Unmanaged.passUnretained(event) }
 
         let eventFlags = event.flags
         let currentShift = eventFlags.contains(.maskShift)
@@ -221,7 +221,7 @@ class EventTapManager {
                     cancelDiacriticMode()
                 }
             }
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
 
         // R⌥ + Backspace → типограф выделенного текста.
@@ -252,7 +252,7 @@ class EventTapManager {
             return nil
         }
 
-        return Unmanaged.passRetained(event)
+        return Unmanaged.passUnretained(event)
     }
 
     // MARK: - Helpers
@@ -381,13 +381,15 @@ class EventTapManager {
         PasteboardPrivacy.restorePrivate(items, to: pb)
     }
 
+    /// Один переиспользуемый источник для синтетических Cmd+C/Cmd+V.
+    private let commandKeySource = CGEventSource(stateID: .hidSystemState)
+
     /// Синтетический аккорд Cmd+<key> (C=0x08, V=0x09).
     private func sendCommandKey(_ keyCode: CGKeyCode) {
-        let source = CGEventSource(stateID: .hidSystemState)
-        let down = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
+        let down = CGEvent(keyboardEventSource: commandKeySource, virtualKey: keyCode, keyDown: true)
         down?.flags = .maskCommand
         down?.post(tap: .cghidEventTap)
-        let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
+        let up = CGEvent(keyboardEventSource: commandKeySource, virtualKey: keyCode, keyDown: false)
         up?.flags = .maskCommand
         up?.post(tap: .cghidEventTap)
     }

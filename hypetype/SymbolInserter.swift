@@ -15,6 +15,10 @@ class SymbolInserter {
 
     private weak var eventTapManager: EventTapManager?
 
+    /// Один переиспользуемый источник событий вместо создания на каждый символ
+    /// (иначе память подрастает на каждое нажатие).
+    private let eventSource = CGEventSource(stateID: .hidSystemState)
+
     init(eventTapManager: EventTapManager) {
         self.eventTapManager = eventTapManager
     }
@@ -40,16 +44,14 @@ class SymbolInserter {
             return
         }
 
-        let source = CGEventSource(stateID: .hidSystemState)
-
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true) else { return }
+        guard let keyDown = CGEvent(keyboardEventSource: eventSource, virtualKey: 0, keyDown: true) else { return }
         let utf16 = Array(symbol.utf16)
         keyDown.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
         keyDown.post(tap: .cghidEventTap)
 
         usleep(1000) // 1 ms — гонка CGEvent Down/Up
 
-        guard let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false) else { return }
+        guard let keyUp = CGEvent(keyboardEventSource: eventSource, virtualKey: 0, keyDown: false) else { return }
         keyUp.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
         keyUp.post(tap: .cghidEventTap)
     }
@@ -86,25 +88,23 @@ class SymbolInserter {
     }
 
     private func simulateCommandV() {
-        let source = CGEventSource(stateID: .hidSystemState)
-
-        let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: true)
+        let cmdDown = CGEvent(keyboardEventSource: eventSource, virtualKey: 0x37, keyDown: true)
         cmdDown?.flags = .maskCommand
         cmdDown?.post(tap: .cghidEventTap)
 
-        let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
+        let vDown = CGEvent(keyboardEventSource: eventSource, virtualKey: 0x09, keyDown: true)
         vDown?.flags = .maskCommand
         vDown?.post(tap: .cghidEventTap)
 
         usleep(10000) // 10 ms
 
-        let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+        let vUp = CGEvent(keyboardEventSource: eventSource, virtualKey: 0x09, keyDown: false)
         vUp?.flags = .maskCommand
         vUp?.post(tap: .cghidEventTap)
 
         usleep(1000) // 1 ms
 
-        let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: false)
+        let cmdUp = CGEvent(keyboardEventSource: eventSource, virtualKey: 0x37, keyDown: false)
         cmdUp?.flags = []
         cmdUp?.post(tap: .cghidEventTap)
     }

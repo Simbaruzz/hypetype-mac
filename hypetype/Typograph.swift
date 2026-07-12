@@ -305,8 +305,24 @@ nonisolated enum Typograph {
 
     // MARK: - Regex-хелпер
 
+    /// Кэш скомпилированных регулярок. Набор паттернов конечный (~30 штук) — кэш
+    /// дорастает до маленького фиксированного размера и не растёт дальше.
+    /// Раньше каждый вызов replace/replaceMatches компилировал ICU-паттерн заново:
+    /// один прогон типографа = ~25 компиляций, отсюда скачок памяти на каждый вызов.
+    private static let regexCache = NSCache<NSString, NSRegularExpression>()
+    private static let regexCacheLock = NSLock()
+
+    private static func regex(_ pattern: String) -> NSRegularExpression? {
+        regexCacheLock.lock()
+        defer { regexCacheLock.unlock() }
+        if let cached = regexCache.object(forKey: pattern as NSString) { return cached }
+        guard let re = try? NSRegularExpression(pattern: pattern) else { return nil }
+        regexCache.setObject(re, forKey: pattern as NSString)
+        return re
+    }
+
     static func replace(_ text: String, _ pattern: String, _ template: String) -> String {
-        guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
+        guard let re = regex(pattern) else { return text }
         let range = NSRange(text.startIndex..., in: text)
         return re.stringByReplacingMatches(in: text, range: range, withTemplate: template)
     }
@@ -314,7 +330,7 @@ nonisolated enum Typograph {
     /// Замена с замыканием: даёт строки всех capture-групп (g[0] — весь матч).
     /// Нужна там, где замена не выразима шаблоном (группировка разрядов, копейки).
     static func replaceMatches(_ text: String, _ pattern: String, _ transform: ([String]) -> String) -> String {
-        guard let re = try? NSRegularExpression(pattern: pattern) else { return text }
+        guard let re = regex(pattern) else { return text }
         let ns = text as NSString
         var result = ""
         var last = 0
