@@ -14,7 +14,17 @@ private let log = Logger(subsystem: "hypetype", category: "KeyboardEditor")
 struct KeyboardEditorView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = KeyboardEditorViewModel()
-    
+
+    /// Подсказка про Shift. «даст ¢» — кликабельная ссылка на страницу поддержки.
+    private var shiftHint: AttributedString {
+        var s = AttributedString("Если символ нарисован в верхней части кнопки, значит нужно нажать ещё и Shift, например ⌥ + ⇧ + С даст ¢")
+        if let range = s.range(of: "даст ¢") {
+            s[range].link = URL(string: "https://boosty.to/simbarus/donate")
+            s[range].underlineStyle = .single
+        }
+        return s
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Клавиатура
@@ -39,7 +49,7 @@ struct KeyboardEditorView: View {
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 
-                Text("Если символ нарисован в верхней части кнопки, значит нужно нажать ещё и Shift, например ⌥ + ⇧ + С даст ¢")
+                Text(shiftHint)
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
 

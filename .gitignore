@@ -11,6 +11,9 @@ DerivedData/
 *.xcscmblueprint
 *.xccheckout
 
+# Профилировщик Instruments
+*.trace
+
 # Swift Package Manager
 .swiftpm/
 .build/
