@@ -14,6 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var eventTapManager: EventTapManager?
     var settingsManager = SettingsManager.shared
     var editorWindow: NSWindow?
+    var editorWindow2: NSWindow?          // ЭКСПЕРИМЕНТ (hypetype-design): новый редактор
     weak var enabledMenuItem: NSMenuItem?
     weak var launchAtLoginMenuItem: NSMenuItem?
     weak var yofikatorMenuItem: NSMenuItem?
@@ -76,6 +77,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Редактировать...", action: #selector(openKeyboardEditor), keyEquivalent: "e"))
+        menu.addItem(NSMenuItem(title: "Редактировать (новый макет)...", action: #selector(openKeyboardEditor2), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Открыть папку настроек", action: #selector(openConfigFolder), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Про hypetype↗", action: #selector(openGitHub), keyEquivalent: ""))
@@ -146,6 +148,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 NotificationCenter.default.removeObserver(obs)
                 self?.windowObserver = nil
             }
+        }
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // ЭКСПЕРИМЕНТ (hypetype-design): открыть новый редактор-клавиатуру.
+    @objc func openKeyboardEditor2() {
+        if let window = editorWindow2 {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let window = NSWindow(
+            contentViewController: NSHostingController(rootView: KeyboardEditorView2())
+        )
+        window.title = "hypetype — новый макет"
+        window.styleMask = [.titled, .closable]
+        window.setContentSize(NSSize(width: 1000, height: 420))
+        window.center()
+        editorWindow2 = window
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            self?.editorWindow2 = nil
         }
 
         window.makeKeyAndOrderFront(nil)
