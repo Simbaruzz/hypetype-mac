@@ -28,6 +28,7 @@ private let kBoardWidth: CGFloat = 13 * kUnit + kWide + 13 * kGap
 private let kAccent = Color(red: 0.72, green: 0.45, blue: 1.0)
 private let kBoard = Color(white: 0.05)
 private let kCapMappable = Color(white: 0.13)
+private let kCapHover = Color(white: 0.20)     // подсветка кликабельной клавиши под курсором
 private let kCapDecor = Color(white: 0.09)
 private let kBorder = Color(white: 0.22)
 
@@ -38,6 +39,7 @@ private enum KeyRole {
     case decor(String, DecorStyle) // декоративная — подпись, не кликается
     case arrows                    // кластер стрелок (перевёрнутая «Т»)
     case typograph                 // ТИПОГРАФ + ⌫ (физически — клавиша Backspace)
+    case info                      // кнопка ⓘ — тоггл мини-инструкции
 }
 
 /// Стили декоративных клавиш.
@@ -93,7 +95,7 @@ private let designRows: [[DKey]] = [
      dec("SHIFT", .emphasis, .flex, BR)],
 
     // Нижний: ⓘ ⌃ ⌥ ⌘ [Space] ⌘ ⌥(правый — подсвечен) + стрелки (каждая 72px)
-    [dec("ⓘ", .strong, .unit, BL), dec("⌃", .dim, .unit, BL), dec("⌥", .dim, .unit, BL),
+    [DKey(role: .info, width: .unit), dec("⌃", .dim, .unit, BL), dec("⌥", .dim, .unit, BL),
      dec("⌘", .dim, .unit, BL), mk("Space", .flex), dec("⌘", .dim, .unit, BR),
      dec("⌥", .highlight, .unit, BR),
      DKey(role: .arrows, width: .unit)],
@@ -106,12 +108,17 @@ struct KeyboardEditorView2: View {
     @State private var mappings: [Int: (normal: String, shift: String)] = LayoutStore.shared.loadMappings()
     /// Клавиша, которую сейчас редактируем (nil — попап закрыт).
     @State private var editingKey: KeyInfo?
+    /// Показана ли мини-инструкция (тоггл кнопкой ⓘ).
+    @State private var showHelp = false
 
     var body: some View {
-        VStack(spacing: kGap) {
-            ForEach(Array(designRows.enumerated()), id: \.offset) { _, row in
-                rowView(row)
+        VStack(alignment: .leading, spacing: 28) {
+            VStack(spacing: kGap) {
+                ForEach(Array(designRows.enumerated()), id: \.offset) { _, row in
+                    rowView(row)
+                }
             }
+            if showHelp { helpPanel }
         }
         .padding(20)
         .background(kBoard)
@@ -121,6 +128,33 @@ struct KeyboardEditorView2: View {
                 save(ki, normal: normal, shift: shift)
             })
         }
+    }
+
+    /// Мини-инструкция снизу: весь текст слева одной колонкой + логотип-ссылка справа.
+    private var helpPanel: some View {
+        HStack(alignment: .bottom, spacing: 20) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Символы вводятся с правым ⌥Option, например ⌥ + < и ⌥ + > дадут «кавычки».")
+                Text(shiftHint)
+                Text("Чтобы воспользоваться типографом, выделите текст и нажмите ⌥ + ⌫ Backspace")
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.white.opacity(0.55))
+
+            Spacer(minLength: 0)
+
+            LogoLink()
+        }
+        .frame(width: kBoardWidth)
+    }
+
+    private var shiftHint: AttributedString {
+        var s = AttributedString("Если символ нарисован в верхней части кнопки, нужно нажать ещё и Shift, например ⌥ + ⇧ + C даст ¢")
+        if let range = s.range(of: "даст ¢") {
+            s[range].link = URL(string: "https://boosty.to/simbarus/donate")
+            s[range].underlineStyle = .single
+        }
+        return s
     }
 
     /// Открыть редактирование клавиши с её текущими значениями.
@@ -161,6 +195,8 @@ struct KeyboardEditorView2: View {
             case .decor(let label, let style): DecorCap(label: label, style: style, align: key.align)
             case .arrows: ArrowsCluster()
             case .typograph: TypographCap()
+            case .info:
+                InfoCap(active: showHelp) { showHelp.toggle() }
             }
         }
         if case .arrows = key.role {
@@ -186,6 +222,7 @@ private struct MappableCap: View {
     let normal: String   // текущий символ (⌥) из конфига
     let shift: String    // текущий символ (⌥⇧) из конфига
     let onTap: () -> Void
+    @State private var hovering = false
 
     private var bottomLabel: String {
         def.w3cName == "Space" ? "SPACE" : def.displayLabel
@@ -221,14 +258,61 @@ private struct MappableCap: View {
         .font(.system(size: kGlyphFont))
         .padding(7)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(kCapMappable)
+        .background(hovering ? kCapHover : kCapMappable)
         .clipShape(RoundedRectangle(cornerRadius: kRadius))
-        .overlay(RoundedRectangle(cornerRadius: kRadius).strokeBorder(kBorder, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: kRadius)
+            .strokeBorder(hovering ? kAccent.opacity(0.6) : kBorder, lineWidth: 1))
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
         .onHover { inside in
+            hovering = inside
             if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
         }
+    }
+}
+
+/// Логотип hypetype → при наведении меняется на логотип Simbarus (лев),
+/// по клику открывает страницу проекта.
+private struct LogoLink: View {
+    @State private var hovering = false
+    private let url = URL(string: "https://simbarus.com/hypetype")!
+
+    var body: some View {
+        Image(hovering ? "SimbarusLogo" : "HypetypeLogo")
+            .resizable()
+            .interpolation(.high)
+            .frame(width: 40, height: 40)
+            .contentShape(Rectangle())
+            .onTapGesture { NSWorkspace.shared.open(url) }
+            .onHover { inside in
+                hovering = inside
+                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+    }
+}
+
+/// Кнопка ⓘ — тоггл мини-инструкции. Кликается, со своим ховером.
+private struct InfoCap: View {
+    let active: Bool
+    let onTap: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Text("ⓘ")
+            .font(.system(size: 15, design: .monospaced))
+            .foregroundStyle(active ? kAccent : .white.opacity(0.90))
+            .padding(8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .background(hovering ? kCapHover : kCapDecor)
+            .clipShape(RoundedRectangle(cornerRadius: kRadius))
+            .overlay(RoundedRectangle(cornerRadius: kRadius)
+                .strokeBorder(hovering ? kAccent.opacity(0.6) : kBorder.opacity(0.6), lineWidth: 1))
+            .contentShape(Rectangle())
+            .onTapGesture { onTap() }
+            .onHover { inside in
+                hovering = inside
+                if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
     }
 }
 
