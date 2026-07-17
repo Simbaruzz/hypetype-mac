@@ -11,6 +11,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 // MARK: - Константы раскладки (масштаб экрана; пропорции как в макете 72:108)
 
@@ -101,6 +102,11 @@ private let designRows: [[DKey]] = [
 // MARK: - Корневой вью
 
 struct KeyboardEditorView2: View {
+    /// Текущая раскладка пользователя (macKeyCode → symbols), живьём из config.ini.
+    @State private var mappings: [Int: (normal: String, shift: String)] = LayoutStore.shared.loadMappings()
+    /// Клавиша, которую сейчас редактируем (nil — попап закрыт).
+    @State private var editingKey: KeyInfo?
+
     var body: some View {
         VStack(spacing: kGap) {
             ForEach(Array(designRows.enumerated()), id: \.offset) { _, row in
@@ -110,6 +116,27 @@ struct KeyboardEditorView2: View {
         .padding(20)
         .background(kBoard)
         .frame(width: kBoardWidth + 40)
+        .sheet(item: $editingKey) { ki in
+            KeyEditSheet(keyInfo: ki, onSave: { normal, shift in
+                save(ki, normal: normal, shift: shift)
+            })
+        }
+    }
+
+    /// Открыть редактирование клавиши с её текущими значениями.
+    private func beginEdit(_ def: KeyDef, _ normal: String, _ shift: String) {
+        let ki = KeyInfo(keyCode: def.macKeyCode,
+                         label: def.w3cName == "Space" ? "Space" : def.displayLabel)
+        ki.normalSymbol = normal
+        ki.shiftSymbol = shift
+        editingKey = ki
+    }
+
+    /// Сохранить изменения: в память, в config.ini и уведомить движок ввода.
+    private func save(_ ki: KeyInfo, normal: String, shift: String) {
+        mappings[ki.keyCode] = (normal, shift)
+        LayoutStore.shared.saveMappings(mappings)
+        NotificationCenter.default.post(name: .mappingsDidChange, object: nil)
     }
 
     private func rowView(_ keys: [DKey]) -> some View {
@@ -125,7 +152,12 @@ struct KeyboardEditorView2: View {
     private func keyView(_ key: DKey) -> some View {
         let cap = Group {
             switch key.role {
-            case .mappable(let def): MappableCap(def: def)
+            case .mappable(let def):
+                let normal = mappings[def.macKeyCode]?.normal ?? def.defaultNormal
+                let shift = mappings[def.macKeyCode]?.shift ?? def.defaultShift
+                MappableCap(def: def, normal: normal, shift: shift) {
+                    beginEdit(def, normal, shift)
+                }
             case .decor(let label, let style): DecorCap(label: label, style: style, align: key.align)
             case .arrows: ArrowsCluster()
             case .typograph: TypographCap()
@@ -151,27 +183,39 @@ struct KeyboardEditorView2: View {
 /// правый-верх — Shift-глиф (фиолетовый). Все одного размера.
 private struct MappableCap: View {
     let def: KeyDef
+    let normal: String   // текущий символ (⌥) из конфига
+    let shift: String    // текущий символ (⌥⇧) из конфига
+    let onTap: () -> Void
 
     private var bottomLabel: String {
         def.w3cName == "Space" ? "SPACE" : def.displayLabel
+    }
+
+    /// Один слот клавиши: обычный глиф текстом, либо плашка-ширины для символов
+    /// без начертания (разные пробелы, невидимые управляющие/форматные).
+    @ViewBuilder
+    private func slot(_ value: String, color: Color) -> some View {
+        if isSingleBarGlyph(value) {
+            BlankBar(value: value, color: color)
+        } else {
+            Text(displayGlyph(value))
+                .foregroundStyle(color)
+                .lineLimit(1).minimumScaleFactor(0.5)
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Spacer(minLength: 0)
-                Text(glyph(def.defaultShift))
-                    .foregroundStyle(kAccent)
-                    .lineLimit(1).minimumScaleFactor(0.5)
+                slot(shift, color: kAccent)
             }
             Spacer(minLength: 0)
             HStack {
                 Text(bottomLabel)
                     .foregroundStyle(.white.opacity(0.35))
                 Spacer(minLength: 0)
-                Text(glyph(def.defaultNormal))
-                    .foregroundStyle(.white)
-                    .lineLimit(1).minimumScaleFactor(0.5)
+                slot(normal, color: .white)
             }
         }
         .font(.system(size: kGlyphFont))
@@ -180,6 +224,11 @@ private struct MappableCap: View {
         .background(kCapMappable)
         .clipShape(RoundedRectangle(cornerRadius: kRadius))
         .overlay(RoundedRectangle(cornerRadius: kRadius).strokeBorder(kBorder, lineWidth: 1))
+        .contentShape(Rectangle())
+        .onTapGesture { onTap() }
+        .onHover { inside in
+            if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
     }
 }
 
@@ -276,10 +325,70 @@ private struct ArrowsCluster: View {
 
 // MARK: - Хелпер глифа
 
-/// Человекочитаемый глиф значения (␣/⍽/диакритика на кружке); пустой → пусто.
-private func glyph(_ s: String) -> String {
-    if s.isEmpty { return "" }
-    return GlyphRenderer.render(Array(s.unicodeScalars))
+private let kSpaceCarrier = "\u{25CC}"   // носитель для комбинирующей диакритики (◌)
+
+/// Символ без начертания (разные пробелы, форматные, управляющие, разделители).
+private func isInvisibleScalar(_ u: Unicode.Scalar) -> Bool {
+    switch u.properties.generalCategory {
+    case .spaceSeparator, .format, .control, .lineSeparator, .paragraphSeparator:
+        return true
+    default:
+        return false
+    }
+}
+
+/// Показать значение плашкой-ширины? Только если это ОДИН невидимый символ
+/// без собственного значка — обычный пробел (␣) и неразрывный (⍽) исключены.
+private func isSingleBarGlyph(_ s: String) -> Bool {
+    let scalars = Array(s.unicodeScalars)
+    guard scalars.count == 1, let u = scalars.first else { return false }
+    if u.value == 0x20 || u.value == 0xA0 { return false }   // у них есть значки
+    if GlyphRenderer.isCombiningDiacritic(u) { return false }
+    return isInvisibleScalar(u)
+}
+
+/// Текстовое представление значения для клавиши:
+/// ␣ — обычный пробел, ⍽ — неразрывный, диакритика — на кружке,
+/// прочие невидимые символы опускаются (в смеси показываем только видимое).
+private func displayGlyph(_ s: String) -> String {
+    var out = ""
+    for u in s.unicodeScalars {
+        switch u.value {
+        case 0x20: out += "␣"
+        case 0xA0: out += "⍽"
+        default:
+            if GlyphRenderer.isCombiningDiacritic(u) {
+                out += kSpaceCarrier + String(u)
+            } else if isInvisibleScalar(u) {
+                continue   // невидимое без значка — не показываем
+            } else {
+                out.unicodeScalars.append(u)
+            }
+        }
+    }
+    return out
+}
+
+/// Плашка шириной с сам невидимый символ: наглядно показывает вид пробела
+/// (волосяной — тонкая, Em — широкая) без кодов U+XXXX. Универсально для любого
+/// символа без начертания.
+private struct BlankBar: View {
+    let value: String
+    let color: Color
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(color.opacity(0.75))
+            .frame(width: barWidth, height: 13)
+    }
+
+    /// Реальная ширина символа в шрифте (замер при увеличенном кегле — чтобы
+    /// разница между пробелами читалась), с минимумом и максимумом.
+    private var barWidth: CGFloat {
+        let font = NSFont.systemFont(ofSize: 30)
+        let w = (value as NSString).size(withAttributes: [.font: font]).width
+        return min(max(w, 3), 42)
+    }
 }
 
 // MARK: - Preview
