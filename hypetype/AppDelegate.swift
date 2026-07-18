@@ -162,12 +162,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let window = NSWindow(
-            contentViewController: NSHostingController(rootView: KeyboardEditorView2())
-        )
+        let hosting = NSHostingController(rootView: KeyboardEditorView2())
+        hosting.sizingOptions = .preferredContentSize   // окно подстраивается под контент (панель ⓘ)
+        let window = NSWindow(contentViewController: hosting)
         window.title = "hypetype — новый макет"
         window.styleMask = [.titled, .closable]
-        window.setContentSize(NSSize(width: 1000, height: 420))
         window.center()
         editorWindow2 = window
 
