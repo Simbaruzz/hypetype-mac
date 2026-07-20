@@ -6,15 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		3F1B18DD2F268D7000928E83 /* DEBUG_STICKY_KEYS.md in Resources */ = {isa = PBXBuildFile; fileRef = 3F1B18DC2F268D7000928E83 /* DEBUG_STICKY_KEYS.md */; };
-		3F1B18DF2F268DE000928E83 /* FIX_SUMMARY.md in Resources */ = {isa = PBXBuildFile; fileRef = 3F1B18DE2F268DE000928E83 /* FIX_SUMMARY.md */; };
-		3F1B18E12F268E2C00928E83 /* QUICK_FIX.md in Resources */ = {isa = PBXBuildFile; fileRef = 3F1B18E02F268E2C00928E83 /* QUICK_FIX.md */; };
-		3F1B18E32F268E7D00928E83 /* STICKY_KEYS_DIAGRAM.md in Resources */ = {isa = PBXBuildFile; fileRef = 3F1B18E22F268E7D00928E83 /* STICKY_KEYS_DIAGRAM.md */; };
-		3F1B18E52F268E8C00928E83 /* TESTING_CHECKLIST.md in Resources */ = {isa = PBXBuildFile; fileRef = 3F1B18E42F268E8C00928E83 /* TESTING_CHECKLIST.md */; };
-		3F1B18E72F268ED700928E83 /* BUGFIX_STICKY_KEYS_README.md in Resources */ = {isa = PBXBuildFile; fileRef = 3F1B18E62F268ED700928E83 /* BUGFIX_STICKY_KEYS_README.md */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		3F8FD4762EFDBDDA003644C2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -33,26 +24,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		3F1B18DC2F268D7000928E83 /* DEBUG_STICKY_KEYS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DEBUG_STICKY_KEYS.md; sourceTree = "<group>"; };
-		3F1B18DE2F268DE000928E83 /* FIX_SUMMARY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FIX_SUMMARY.md; sourceTree = "<group>"; };
-		3F1B18E02F268E2C00928E83 /* QUICK_FIX.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = QUICK_FIX.md; sourceTree = "<group>"; };
-		3F1B18E22F268E7D00928E83 /* STICKY_KEYS_DIAGRAM.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = STICKY_KEYS_DIAGRAM.md; sourceTree = "<group>"; };
-		3F1B18E42F268E8C00928E83 /* TESTING_CHECKLIST.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TESTING_CHECKLIST.md; sourceTree = "<group>"; };
-		3F1B18E62F268ED700928E83 /* BUGFIX_STICKY_KEYS_README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = BUGFIX_STICKY_KEYS_README.md; sourceTree = "<group>"; };
-		3F56CBF02F23EEC4003D6720 /* CHECKLIST.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHECKLIST.md; sourceTree = "<group>"; };
-		3F56CBF12F23EEC4003D6720 /* CLIPBOARD_HISTORY_FIX.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLIPBOARD_HISTORY_FIX.md; sourceTree = "<group>"; };
-		3F56CBF22F23EEC4003D6720 /* DIACRITIC_DEBUG.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DIACRITIC_DEBUG.md; sourceTree = "<group>"; };
-		3F56CBF32F23EEC4003D6720 /* DIACRITIC_MULTILANG.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DIACRITIC_MULTILANG.md; sourceTree = "<group>"; };
-		3F56CBF42F23EEC4003D6720 /* DIACRITICS_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DIACRITICS_GUIDE.md; sourceTree = "<group>"; };
-		3F56CBF52F23EEC4003D6720 /* INDEX.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = INDEX.md; sourceTree = "<group>"; };
-		3F56CBF62F23EEC4003D6720 /* INSERTION_METHODS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = INSERTION_METHODS.md; sourceTree = "<group>"; };
-		3F56CBF72F23EEC4003D6720 /* PROJECT_SUMMARY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PROJECT_SUMMARY.md; sourceTree = "<group>"; };
-		3F56CBF82F23EEC4003D6720 /* QUICK_START.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = QUICK_START.md; sourceTree = "<group>"; };
-		3F56CBF92F23EEC4003D6720 /* ROADMAP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ROADMAP.md; sourceTree = "<group>"; };
-		3F56CBFA2F23EEC4003D6720 /* SETUP_INSTRUCTIONS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SETUP_INSTRUCTIONS.md; sourceTree = "<group>"; };
-		3F56CBFB2F23EEC4003D6720 /* SYMBOLS_REFERENCE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SYMBOLS_REFERENCE.md; sourceTree = "<group>"; };
-		3F56CBFC2F23EEC4003D6720 /* TROUBLESHOOTING.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TROUBLESHOOTING.md; sourceTree = "<group>"; };
-		3F56CBFE2F2405D6003D6720 /* install.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = install.txt; sourceTree = "<group>"; };
 		3F8FD4682EFDBDD9003644C2 /* hypetype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hypetype.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F8FD4752EFDBDDA003644C2 /* hypetypeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = hypetypeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F8FD47F2EFDBDDA003644C2 /* hypetypeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = hypetypeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -101,37 +72,9 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		3F56CBFD2F23EEC4003D6720 /* DOCS */ = {
-			isa = PBXGroup;
-			children = (
-				3F56CBFE2F2405D6003D6720 /* install.txt */,
-				3F56CBF02F23EEC4003D6720 /* CHECKLIST.md */,
-				3F56CBF12F23EEC4003D6720 /* CLIPBOARD_HISTORY_FIX.md */,
-				3F56CBF22F23EEC4003D6720 /* DIACRITIC_DEBUG.md */,
-				3F56CBF32F23EEC4003D6720 /* DIACRITIC_MULTILANG.md */,
-				3F56CBF42F23EEC4003D6720 /* DIACRITICS_GUIDE.md */,
-				3F56CBF52F23EEC4003D6720 /* INDEX.md */,
-				3F56CBF62F23EEC4003D6720 /* INSERTION_METHODS.md */,
-				3F56CBF72F23EEC4003D6720 /* PROJECT_SUMMARY.md */,
-				3F56CBF82F23EEC4003D6720 /* QUICK_START.md */,
-				3F56CBF92F23EEC4003D6720 /* ROADMAP.md */,
-				3F56CBFA2F23EEC4003D6720 /* SETUP_INSTRUCTIONS.md */,
-				3F56CBFB2F23EEC4003D6720 /* SYMBOLS_REFERENCE.md */,
-				3F56CBFC2F23EEC4003D6720 /* TROUBLESHOOTING.md */,
-				3F1B18E62F268ED700928E83 /* BUGFIX_STICKY_KEYS_README.md */,
-				3F1B18DC2F268D7000928E83 /* DEBUG_STICKY_KEYS.md */,
-				3F1B18DE2F268DE000928E83 /* FIX_SUMMARY.md */,
-				3F1B18E02F268E2C00928E83 /* QUICK_FIX.md */,
-				3F1B18E22F268E7D00928E83 /* STICKY_KEYS_DIAGRAM.md */,
-				3F1B18E42F268E8C00928E83 /* TESTING_CHECKLIST.md */,
-			);
-			path = DOCS;
-			sourceTree = "<group>";
-		};
 		3F8FD45F2EFDBDD9003644C2 = {
 			isa = PBXGroup;
 			children = (
-				3F56CBFD2F23EEC4003D6720 /* DOCS */,
 				3F8FD46A2EFDBDD9003644C2 /* hypetype */,
 				3F8FD4782EFDBDDA003644C2 /* hypetypeTests */,
 				3F8FD4822EFDBDDA003644C2 /* hypetypeUITests */,
@@ -269,12 +212,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F1B18DD2F268D7000928E83 /* DEBUG_STICKY_KEYS.md in Resources */,
-				3F1B18E32F268E7D00928E83 /* STICKY_KEYS_DIAGRAM.md in Resources */,
-				3F1B18E12F268E2C00928E83 /* QUICK_FIX.md in Resources */,
-				3F1B18E52F268E8C00928E83 /* TESTING_CHECKLIST.md in Resources */,
-				3F1B18E72F268ED700928E83 /* BUGFIX_STICKY_KEYS_README.md in Resources */,
-				3F1B18DF2F268DE000928E83 /* FIX_SUMMARY.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
