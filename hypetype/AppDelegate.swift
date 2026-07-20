@@ -20,6 +20,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var configWatcher: ConfigFileWatcher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Под тестами хост-приложение запускается ради инъекции тест-бандла. НЕ поднимаем
+        // меню/перехват клавиш/запрос Accessibility — иначе системный диалог прав вешает
+        // старт, и тесты никогда не стартуют (зависание). Пустой старт → тесты бегут сразу.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || NSClassFromString("XCTestCase") != nil {
+            return
+        }
+
         NSApp.setActivationPolicy(.accessory)
         setupMenuBar()
         startConfigWatcher()
