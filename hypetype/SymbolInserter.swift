@@ -47,12 +47,18 @@ class SymbolInserter {
         guard let keyDown = CGEvent(keyboardEventSource: eventSource, virtualKey: 0, keyDown: true) else { return }
         let utf16 = Array(symbol.utf16)
         keyDown.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
+        // Снимаем модификаторы с синтетического события. Источник .hidSystemState
+        // захватывает реально зажатые R⌥/⇧, и без обнуления агрессивные приложения
+        // (VS Code/Electron) читают вброс как аккорд ⌥⇧+клавиша и запускают свой хоткей
+        // вместо вставки символа. С пустыми флагами это чистый ввод текста.
+        keyDown.flags = []
         keyDown.post(tap: .cghidEventTap)
 
         usleep(1000) // 1 ms — гонка CGEvent Down/Up
 
         guard let keyUp = CGEvent(keyboardEventSource: eventSource, virtualKey: 0, keyDown: false) else { return }
         keyUp.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
+        keyUp.flags = []
         keyUp.post(tap: .cghidEventTap)
     }
 
