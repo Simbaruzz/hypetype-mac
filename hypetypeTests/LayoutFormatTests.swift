@@ -154,3 +154,93 @@ struct LayoutFormatTests {
         #expect(LayoutFormat.serialize(layout).contains("IntlBackslash=0040|"))
     }
 }
+
+// MARK: - Секция [Typograph]
+
+struct TypographFormatTests {
+
+    @Test func defaultsWhenSectionMissing() {
+        // Реф-файл без [Typograph] → все настройки типографа по умолчанию.
+        let layout = LayoutFormat.parse(LayoutFormatTests.reference)
+        #expect(layout.typograph == .default)
+    }
+
+    @Test func parsesSectionValues() {
+        let input = """
+        [hypetype]
+        version=2
+
+        [Layout]
+        KeyE=20AC|2325
+
+        [Typograph]
+        Quotes=0
+        PercentSpace=narrow
+        CurrencyPosition=before
+        NbspInitials=0
+        """
+        let s = LayoutFormat.parse(input).typograph
+        #expect(s.quotes == false)
+        #expect(s.percentSpace == .narrow)
+        #expect(s.currencyPosition == .before)
+        #expect(s.nbspInitials == false)
+        // Не указанные ключи остаются дефолтными.
+        #expect(s.dashText == true)
+        #expect(s.symbols == true)
+    }
+
+    @Test func ignoresUnknownKeyAndInvalidValue() {
+        let input = """
+        [hypetype]
+        version=2
+
+        [Typograph]
+        Quotes=maybe
+        FutureKey=42
+        PercentSpace=wide
+        """
+        let s = LayoutFormat.parse(input).typograph
+        // Невалидное булево и неизвестное перечисление — остаётся дефолт.
+        #expect(s.quotes == true)
+        #expect(s.percentSpace == .none)
+    }
+
+    @Test func roundTripLosesNothing() {
+        var s = TypographSettings.default
+        s.quotes = false
+        s.dashRanges = false
+        s.percentSpace = .regular
+        s.currencyPosition = .before
+        s.nbspParticles = false
+        // Полный кодек: settings → секция [Typograph] → обратно.
+        var layout = Layout.standard
+        layout.typograph = s
+        let text = LayoutFormat.serialize(layout)
+        #expect(LayoutFormat.parse(text).typograph == s)
+    }
+
+    @Test func serializationIsIdempotent() {
+        var layout = Layout.standard
+        layout.typograph.percentSpace = .narrow
+        let once = LayoutFormat.serialize(layout)
+        let twice = LayoutFormat.serialize(LayoutFormat.parse(once))
+        #expect(once == twice)
+    }
+
+    @Test func sectionEmittedInSerializedFile() {
+        let out = LayoutFormat.serialize(Layout.standard)
+        #expect(out.contains("[Typograph]"))
+        #expect(out.contains("PercentSpace=none"))
+        #expect(out.contains("CurrencyPosition=after"))
+    }
+
+    @Test func yofikatorRoundTrips() {
+        var layout = Layout.standard
+        layout.yofikator = true
+        let text = LayoutFormat.serialize(layout)
+        #expect(text.contains("Yofikator=1"))
+        #expect(LayoutFormat.parse(text).yofikator == true)
+        // Отсутствие ключа = выключен (реф-файл без [Typograph]).
+        #expect(LayoutFormat.parse(LayoutFormatTests.reference).yofikator == false)
+    }
+}

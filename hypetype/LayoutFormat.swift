@@ -33,7 +33,7 @@ nonisolated enum LayoutFormat {
         var lines: [String] = []
         text.enumerateLines { line, _ in lines.append(line) }
 
-        enum SectionKind { case hypetype, layout, ownPlatform, foreign(String) }
+        enum SectionKind { case hypetype, layout, ownPlatform, typograph, foreign(String) }
         var current: SectionKind? = nil
         var foreignBuffer: [String] = []
         var foreignName: String? = nil
@@ -55,9 +55,10 @@ nonisolated enum LayoutFormat {
                 let name = String(effective.dropFirst().dropLast()).trimmingCharacters(in: .whitespaces)
                 flushForeign()
                 switch name {
-                case "hypetype":   current = .hypetype
-                case "Layout":     current = .layout
-                case ownPlatform:  current = .ownPlatform
+                case "hypetype":                    current = .hypetype
+                case "Layout":                      current = .layout
+                case ownPlatform:                   current = .ownPlatform
+                case TypographFormat.sectionName:   current = .typograph
                 default:
                     current = .foreign(name)
                     foreignName = name
@@ -79,6 +80,14 @@ nonisolated enum LayoutFormat {
             case .ownPlatform:
                 if let (key, value) = keyValue(effective) {
                     layout.platformSettings.append(SettingEntry(key: key, value: value))
+                }
+            case .typograph:
+                if let (key, value) = keyValue(effective) {
+                    if key == "Yofikator" {
+                        layout.yofikator = ["1", "true", "yes", "on"].contains(value.lowercased())
+                    } else {
+                        TypographFormat.apply(to: &layout.typograph, key: key, value: value)
+                    }
                 }
             case .layout:
                 guard let (key, value) = keyValue(effective) else { continue }
@@ -129,6 +138,11 @@ nonisolated enum LayoutFormat {
             layoutLines.append("\(raw.key)=\(raw.rawValue)")
         }
         sections.append((["[Layout]"] + layoutLines).joined(separator: lineEnding))
+
+        // Секция типографа [Typograph] — всегда пишем полный набор ключей (дефолты не скрываем).
+        var typographLines = TypographFormat.serialize(layout.typograph)
+        typographLines.append("Yofikator=\(layout.yofikator ? "1" : "0")")
+        sections.append((["[\(TypographFormat.sectionName)]"] + typographLines).joined(separator: lineEnding))
 
         // Собственная платформенная секция (если есть настройки).
         if !layout.platformSettings.isEmpty {

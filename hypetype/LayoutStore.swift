@@ -12,6 +12,11 @@ import OSLog
 
 private let log = Logger(subsystem: "hypetype", category: "LayoutStore")
 
+extension Notification.Name {
+    /// Раскладка изменилась (правка в редакторе или внешняя подмена config.ini) — перечитать.
+    static let mappingsDidChange = Notification.Name("mappingsDidChange")
+}
+
 final class LayoutStore {
     static let shared = LayoutStore()
 
@@ -79,6 +84,28 @@ final class LayoutStore {
             layout = .standard
         }
         layout.applyMacMappings(mappings)
+        write(layout)
+    }
+
+    // MARK: - Настройки типографа ([Typograph])
+
+    /// Настройки типографа + ёфикатор из config.ini (или дефолты, если секции/файла нет).
+    /// Читаются на каждом вызове — как раскладка (TYPOGRAPH.md §9.3 п.8).
+    func loadTypograph() -> (settings: TypographSettings, yofikator: Bool) {
+        let layout = loadLayout()
+        return (layout.typograph, layout.yofikator)
+    }
+
+    /// Сохраняет настройки типографа + ёфикатор, сохраняя раскладку/чужие секции (round-trip §7).
+    func saveTypograph(settings: TypographSettings, yofikator: Bool) {
+        var layout: Layout
+        if let text = try? String(contentsOf: iniURL, encoding: .utf8) {
+            layout = LayoutFormat.parse(text)
+        } else {
+            layout = .standard
+        }
+        layout.typograph = settings
+        layout.yofikator = yofikator
         write(layout)
     }
 

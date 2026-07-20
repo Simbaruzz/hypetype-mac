@@ -110,8 +110,18 @@ struct KeyboardEditorView2: View {
     @State private var editing: EditTarget?
     /// Показана ли мини-инструкция (тоггл кнопкой ⓘ).
     @State private var showHelp = false
+    /// Открыта ли страница настроек типографа (по клику на клавишу ТИПОГРАФ).
+    @State private var showingTypograph = false
 
     var body: some View {
+        if showingTypograph {
+            TypographSettingsView(onClose: { showingTypograph = false })
+        } else {
+            boardView
+        }
+    }
+
+    private var boardView: some View {
         ZStack {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(spacing: kGap) {
@@ -198,7 +208,7 @@ struct KeyboardEditorView2: View {
                 }
             case .decor(let label, let style): DecorCap(label: label, style: style, align: key.align)
             case .arrows: ArrowsCluster()
-            case .typograph: TypographCap()
+            case .typograph: TypographCap { showingTypograph = true }
             case .info:
                 InfoCap(active: showHelp) { showHelp.toggle() }
             }
@@ -324,7 +334,7 @@ private struct InfoCap: View {
             .foregroundStyle(active ? kAccent : .white.opacity(0.90))
             .padding(8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-            .background(hovering ? kCapHover : kCapDecor)
+            .background(hovering ? kCapHover : kCapMappable)
             .clipShape(RoundedRectangle(cornerRadius: kRadius))
             .overlay(RoundedRectangle(cornerRadius: kRadius)
                 .strokeBorder(hovering ? kAccent.opacity(0.6) : kBorder.opacity(0.6), lineWidth: 1))
@@ -373,6 +383,9 @@ private struct DecorCap: View {
 /// Клавиша ТИПОГРАФ (физически — Backspace): «ТИПОГРАФ» сверху-справа (белым) +
 /// иконка ⌫ снизу-справа (приглушённая).
 private struct TypographCap: View {
+    let onTap: () -> Void
+    @State private var hovering = false
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -391,9 +404,16 @@ private struct TypographCap: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(kCapDecor)
+        .background(hovering ? kCapHover : kCapMappable)
         .clipShape(RoundedRectangle(cornerRadius: kRadius))
-        .overlay(RoundedRectangle(cornerRadius: kRadius).strokeBorder(kBorder.opacity(0.6), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: kRadius)
+            .strokeBorder(hovering ? kAccent.opacity(0.6) : kBorder, lineWidth: 1))
+        .contentShape(Rectangle())
+        .onTapGesture { onTap() }
+        .onHover { inside in
+            hovering = inside
+            if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
     }
 }
 

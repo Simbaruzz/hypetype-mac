@@ -17,15 +17,7 @@ class SettingsManager: ObservableObject {
         }
     }
 
-    /// Применять ли ёфикатор (е→ё) вместе с типографом по R⌥+Backspace. По умолчанию выключен (opt-in).
-    @Published var useYofikator: Bool {
-        didSet {
-            UserDefaults.standard.set(useYofikator, forKey: "useYofikator")
-        }
-    }
-
     private init() {
         self.isEnabled = UserDefaults.standard.object(forKey: "isEnabled") as? Bool ?? false
-        self.useYofikator = UserDefaults.standard.object(forKey: "useYofikator") as? Bool ?? false
     }
 }

@@ -18,7 +18,7 @@ private func check(_ f: (String) -> String, _ input: String, _ expected: String,
 }
 
 struct TypographPunctTests {
-    let g = Typograph.punctuation
+    let g: (String) -> String = { Typograph.punctuation($0, .default) }
 
     @Test func ellipsis() {
         check(g, "точки...", "точки\u{2026}")
@@ -57,15 +57,23 @@ struct TypographSpaceTests {
         check(g, "слово !", "слово!")
     }
     @Test func percentDefaultGlued() {
-        check(g, "23 %", "23%")
+        check({ Typograph.percentSpacing($0, .default) }, "23 %", "23%")
     }
     @Test func percentNarrow() {
         let narrow: (String) -> String = {
             var s = TypographSettings.default; s.percentSpace = .narrow
-            return Typograph.spaceClean($0, s)
+            return Typograph.percentSpacing($0, s)
         }
         check(narrow, "23 %", "23\u{202F}%")
         check(narrow, "23%", "23\u{202F}%")
+    }
+    @Test func percentRegular() {
+        let reg: (String) -> String = {
+            var s = TypographSettings.default; s.percentSpace = .regular
+            return Typograph.percentSpacing($0, s)
+        }
+        check(reg, "23%", "23 %")
+        check(reg, "23\u{202F}%", "23 %")
     }
     @Test func doubleSpaces() {
         check(g, "слово  слово", "слово слово")
@@ -108,7 +116,43 @@ struct TypographPipelineTests {
     }
     @Test func groupTogglesOff() {
         var s = TypographSettings.default
-        s.punct = false
+        s.punctEllipsis = false
         #expect(Typograph.run("точки...", s) == "точки...")
+    }
+}
+
+/// Под-тумблеры расщеплённых групп: каждый выключает только своё правило.
+struct TypographSubToggleTests {
+    private func run(_ input: String, _ mutate: (inout TypographSettings) -> Void) -> String {
+        var s = TypographSettings.default
+        mutate(&s)
+        return Typograph.run(input, s)
+    }
+
+    @Test func dashRangesOffKeepsTextDash() {
+        // Диапазоны выключены — 2002-2009 не трогаем, но тире в тексте работает.
+        let out = run("с 2002-2009 - это диапазон") { $0.dashRanges = false }
+        #expect(out.contains("2002-2009"))
+        #expect(out.contains("\u{00A0}— это"))
+    }
+
+    @Test func nbspShortWordsOffKeepsNumberWord() {
+        // Предлоги выключены — "в лесу" без НБ, но "5 лет" с НБ (другой под-тумблер).
+        let out = run("в лесу 5 лет") { $0.nbspShortWords = false }
+        #expect(out.contains("в лесу"))
+        #expect(out.contains("5\u{00A0}лет"))
+    }
+
+    @Test func currencyGroupingOffKeepsSymbol() {
+        // Группировка выключена — символ валюты ставится, но разряды не группируются.
+        let out = run("2345123 руб.") { $0.currencyGrouping = false }
+        #expect(out.contains("2345123\u{00A0}₽"))
+    }
+
+    @Test func punctOrderOffKeepsCollapse() {
+        // Порядок !? не чиним, но повторы схлопываем.
+        let out = run("что!? да!!!") { $0.punctOrder = false }
+        #expect(out.contains("что!?"))
+        #expect(out.contains("да!"))
     }
 }

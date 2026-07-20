@@ -339,10 +339,12 @@ class EventTapManager {
 
     private func processCopiedText(_ text: String, pb: NSPasteboard, saved: [NSPasteboardItem]) {
         var result = text
-        if SettingsManager.shared.useYofikator {
+        // Ёфикатор + настройки типографа читаем из config.ini на каждом нажатии (как раскладку).
+        let cfg = LayoutStore.shared.loadTypograph()
+        if cfg.yofikator {
             result = Yofikator.shared.yoficate(result)
         }
-        result = Typograph.run(result)
+        result = Typograph.run(result, cfg.settings)
 
         if result == text {
             restorePasteboard(pb, saved)

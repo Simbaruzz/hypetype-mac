@@ -11,7 +11,7 @@ import Testing
 private let N = "\u{00A0}"
 
 struct TypographNbspTests {
-    let g = Typograph.nonBreaking
+    let g: (String) -> String = { Typograph.nonBreaking($0, .default) }
 
     @Test func numberAndWord() {
         #expect(g("5 лет") == "5\(N)лет")

@@ -51,6 +51,13 @@ nonisolated struct Layout: Equatable {
     /// Настройки собственной платформенной секции ([macOS]) в исходном порядке.
     var platformSettings: [SettingEntry] = []
 
+    /// Настройки типографа (секция [Typograph]). Отсутствие секции = значения по умолчанию.
+    var typograph = TypographSettings.default
+
+    /// Ёфикатор (е→ё) — ключ Yofikator в секции [Typograph]. Не часть движка типографа,
+    /// но хранится рядом, чтобы ездить с конфигом. По умолчанию выключен (opt-in).
+    var yofikator = false
+
     /// Чужие секции в исходном порядке.
     var foreignSections: [ForeignSection] = []
 
