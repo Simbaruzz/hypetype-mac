@@ -557,7 +557,6 @@ private struct KeyEditPopup: View {
             TextField("", text: text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 34))
-                .multilineTextAlignment(.trailing)
                 .foregroundStyle(.white)
                 .focused($focus, equals: id)
                 .padding(.horizontal, 18)
