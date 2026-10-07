@@ -27,6 +27,10 @@ class EventTapManager {
     private var diacriticIndicator: DiacriticIndicatorWindow?
     private var diacriticTimeout: TimeInterval = 3.0   // из [macOS] DiacriticTimeoutMs
 
+    // Повтор создания Event Tap, если система отказала (см. scheduleTapRetry)
+    private var tapRetryTimer: DispatchWorkItem?
+    private static let tapRetryInterval: TimeInterval = 2.0
+
     private var isTypographing = false                 // буферная операция типографа в процессе
     private static let typographKeyCode = 0x33         // Backspace/Delete (R⌥+Backspace)
 
@@ -43,6 +47,7 @@ class EventTapManager {
     deinit {
         NotificationCenter.default.removeObserver(self)
         diacriticTimer?.cancel()
+        tapRetryTimer?.cancel()
     }
 
     // MARK: - Диакритика
@@ -108,11 +113,33 @@ class EventTapManager {
         mappings = layout.toMacMappings()
         diacriticTimeout = layout.diacriticTimeoutSeconds
 
+        tapRetryTimer?.cancel()
+        tapRetryTimer = nil
+        // Повторный start() без stop() не должен плодить второй tap.
+        removeTap()
+
+        if createTap() {
+            log.info("Event Tap started, \(self.mappings.count) mappings loaded")
+        } else {
+            log.error("Failed to create Event Tap — grant Accessibility permission in System Settings")
+            scheduleTapRetry()
+        }
+    }
+
+    func stop() {
+        tapRetryTimer?.cancel()
+        tapRetryTimer = nil
+        guard eventTap != nil else { return }
+        removeTap()
+        log.info("Event Tap stopped")
+    }
+
+    private func createTap() -> Bool {
         let eventMask = (1 << CGEventType.keyDown.rawValue) |
                         (1 << CGEventType.keyUp.rawValue) |
                         (1 << CGEventType.flagsChanged.rawValue)
 
-        eventTap = CGEvent.tapCreate(
+        guard let tap = CGEvent.tapCreate(
             tap: .cghidEventTap,
             place: .headInsertEventTap,
             options: .defaultTap,
@@ -123,26 +150,43 @@ class EventTapManager {
                 return manager.handleEvent(type: type, event: event)
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
-        )
+        ) else { return false }
 
-        guard let tap = eventTap else {
-            log.error("Failed to create Event Tap — grant Accessibility permission in System Settings")
-            return
-        }
-
+        eventTap = tap
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        log.info("Event Tap started, \(self.mappings.count) mappings loaded")
+        return true
     }
 
-    func stop() {
+    private func removeTap() {
         guard let tap = eventTap else { return }
         CGEvent.tapEnable(tap: tap, enable: false)
         if let src = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), src, .commonModes)
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), src, .commonModes)
         }
-        log.info("Event Tap stopped")
+        CFMachPortInvalidate(tap)
+        eventTap = nil
+        runLoopSource = nil
+        rightOptionPressed = false
+    }
+
+    /// Система может отказать в создании tap, хотя доступ уже выдан: сразу после
+    /// включения тумблера в «Универсальном доступе» или на старте при входе в систему.
+    /// Без повтора «Виртуализация» остаётся с галочкой, а перехвата нет — правый ⌥
+    /// печатает стандартные символы macOS, пока галочку не переключат вручную.
+    private func scheduleTapRetry() {
+        let retry = DispatchWorkItem { [weak self] in
+            guard let self = self, self.eventTap == nil, SettingsManager.shared.isEnabled else { return }
+            if self.createTap() {
+                self.tapRetryTimer = nil
+                log.info("Event Tap started after retry, \(self.mappings.count) mappings loaded")
+            } else {
+                self.scheduleTapRetry()
+            }
+        }
+        tapRetryTimer = retry
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.tapRetryInterval, execute: retry)
     }
 
     func reloadMappings() {
